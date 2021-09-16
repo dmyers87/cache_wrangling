@@ -8,7 +8,7 @@
 // https://docs.mongodb.com/manual/faq/diagnostics/#memory-diagnostics-for-the-wiredtiger-storage-engine
 //
 // In general,
-//  index data is somewhat compressed in the cache (using inddex prefix compression)
+//  index data is somewhat compressed in the cache (using index prefix compression)
 //  collection data is NOT compressed in the cache
 
 /**
@@ -42,7 +42,7 @@ function niceNum(n) {
 /**
  * @param collName collection name
  * @return returns an array object objects
- *    each with indxName and cachedBytes
+ *    each with indexName and cachedBytes
  */
  function getIndexCachedArray(collName) {
  	var indexCachedArray = [];
@@ -131,14 +131,14 @@ function cachedPercentString(totalCachedNum, cachedNum) {
 }
 
 /**
- * Produces a cxache report of for all collections and indexes in
+ * Produces a cache report of for all collections and indexes in
  * the specified database
  * @param dbName name of database
  */
 function dbCacheReport(dbName) {
 	db = db.getSiblingDB(dbName);
 	print(`DB name:\t${db}`)
-	// need clusterMonitor role to get the total size of cache data (serverStatus privlege)
+	// need clusterMonitor role to get the total size of cache data (serverStatus privilege)
 	var totalCacheSize = db.serverStatus()['wiredTiger']['cache']["bytes currently in the cache"];
 	print(`cached data: \t`+ humanReadableNumber(totalCacheSize));
 	print();
