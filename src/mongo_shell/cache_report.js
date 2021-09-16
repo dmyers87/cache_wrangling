@@ -140,18 +140,17 @@ function dbCacheReport(dbName) {
 	print(`DB name:\t${db}`)
 	// need clusterMonitor role to get the total size of cache data (serverStatus privilege)
 	var totalCacheSize = db.serverStatus()['wiredTiger']['cache']["bytes currently in the cache"];
-	print(`cached data: \t`+ humanReadableNumber(totalCacheSize));
 	print();
 
 	var collNameSize = 20;
 	var collNameHeader = pad(collNameSize, "COLL NAME")
-	var collCachedSize = 10;
+	var collCachedSize = 12;
 	var collCachedHeader = pad(collCachedSize, "CACHED")
 	var collCachedPercentSize = 6;
 	var collCachedPHeader = pad(collCachedPercentSize, "%")
 	var indexNameSize = 20
 	var indexNameHeader = pad(indexNameSize, "INDEX NAME")
-	var indexCachedSize = 10;
+	var indexCachedSize = 12;
 	var indexCachedHeader = pad(indexCachedSize, "CACHED")
 	var indexCachedPercentSize = 6;
 	var indexCachedPHeader = pad(indexCachedPercentSize, "%")
@@ -165,6 +164,7 @@ function dbCacheReport(dbName) {
 		}
 
 	collCached.sort(function(a,b) {return a.cached > b.cached});
+	totalCachedDBObj = 0;
 	for(let x of collCached) {
 			var indexCached = getIndexCachedArray(x.cn);
 			for(let i = 0; i < indexCached.length; i++)	{
@@ -176,6 +176,8 @@ function dbCacheReport(dbName) {
 						+ pad(indexCachedSize, humanReadableNumber(indexCached[i].cachedBytes)) + ' '
 						+ pad(indexCachedPercentSize, cachedPercentString(totalCacheSize, indexCached[i].cachedBytes))
 					);
+					totalCachedDBObj += x.cached;
+					totalCachedDBObj += indexCached[i].cachedBytes;
 				}
 				else {
 					print(pad(collNameSize, ' -') + ' '
@@ -185,9 +187,13 @@ function dbCacheReport(dbName) {
 						+ pad(indexCachedSize, humanReadableNumber(indexCached[i].cachedBytes)) + ' '
 						+ pad(indexCachedPercentSize, cachedPercentString(totalCacheSize, indexCached[i].cachedBytes))
 					);
+					totalCachedDBObj += indexCached[i].cachedBytes;
 				}
 			}
 		}
+	print();
+	print(`\tUses ${cachedPercentString(totalCacheSize, totalCachedDBObj)}% of total cache of ${humanReadableNumber(totalCacheSize)}`);
+
 }
 
 /**
