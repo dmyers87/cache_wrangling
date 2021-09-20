@@ -44,29 +44,29 @@ function niceNum(n) {
  * @return returns an array object objects
  *    each with indexName and cachedBytes
  */
- function getIndexCachedArray(collName) {
- 	var indexCachedArray = [];
+function getIndexCachedArray(collName) {
+	var indexCachedArray = [];
 
- 	try {
- 		var	indexStats = db[collName].stats({indexDetails:true});
- 	}
- 	catch(e) {
- 		if(e instanceof TypeError) { // may be special collection or a view
- 			return indexCachedArray;
- 		}
- 	}
- 	// See https://docs.mongodb.com/v4.0/reference/method/db.collection.stats/
-   if(typeof indexStats['indexDetails'] !== 'undefined') {
-     Object.keys(indexStats.indexSizes).forEach(
-       function(d) {
- 				var bcic = indexStats['indexDetails'][d]['cache']["bytes currently in the cache"]
- 				indexCachedArray.push({idxName: d, cachedBytes:bcic});
-       }
-     )
- 		indexCachedArray.sort(function(a,b) {return a.cachedBytes > b.cachedBytes})
- 	}
- 	return indexCachedArray;
- }
+	try {
+		var	indexStats = db[collName].stats({indexDetails:true});
+	}
+	catch(e) {
+		if(e instanceof TypeError) { // may be special collection or a view
+		return indexCachedArray;
+		}
+	}
+	// See https://docs.mongodb.com/v4.0/reference/method/db.collection.stats/
+	if(typeof indexStats['indexDetails'] !== 'undefined') {
+		Object.keys(indexStats.indexSizes).forEach(
+			function(d) {
+				var bcic = indexStats['indexDetails'][d]['cache']["bytes currently in the cache"]
+				indexCachedArray.push({idxName: d, cachedBytes:bcic});
+			}
+		)
+		indexCachedArray.sort(function(a,b) {return a.cachedBytes > b.cachedBytes})
+	}
+	return indexCachedArray;
+}
 
 
 /**
@@ -115,7 +115,7 @@ function humanReadableNumber(num) {
 
 /**
  * @param totalCachedNum total cached data size
- * @param cachedNumber collection or index cached data size
+ * @param cachedNum collection or index cached data size
  * @return string containing the percent
  */
 function cachedPercentString(totalCachedNum, cachedNum) {
@@ -137,7 +137,7 @@ function cachedPercentString(totalCachedNum, cachedNum) {
  */
 function dbCacheReport(dbName) {
 	db = db.getSiblingDB(dbName);
-	print(`DB name:\t${db}`)
+	print(`DB name:\t${db._name}`)
 	// need clusterMonitor role to get the total size of cache data (serverStatus privilege)
 	var totalCacheSize = db.serverStatus()['wiredTiger']['cache']["bytes currently in the cache"];
 	print();
@@ -164,7 +164,7 @@ function dbCacheReport(dbName) {
 		}
 
 	collCached.sort(function(a,b) {return a.cached > b.cached});
-	totalCachedDBObj = 0;
+	var totalCachedDBObj = 0;
 	for(let x of collCached) {
 			var indexCached = getIndexCachedArray(x.cn);
 			for(let i = 0; i < indexCached.length; i++)	{
