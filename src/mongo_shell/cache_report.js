@@ -219,8 +219,11 @@ function cacheReport(scope="current") {
 			})
 			break;
 
-		default:
-			print('function takes "current" database or "all" databases');
+        case scope:
+			var dbName = scope;
+			dbCacheReport(dbName);
+			break;			
+
 	}
 }
 
