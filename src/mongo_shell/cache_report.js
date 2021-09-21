@@ -205,7 +205,7 @@ function cacheReport(scope="current") {
 	print(`date:\t\t${dt}`);
 	switch(scope) {
 		case "current":
-			var dbName = db;
+			var dbName = db._name;
 			dbCacheReport(dbName);
 			break;
 
