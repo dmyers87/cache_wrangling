@@ -130,6 +130,119 @@ function cachedPercentString(totalCachedNum, cachedNum) {
 	return rtnStr;
 }
 
+/*
+	example cache report obj
+	{
+		"captureDate" : "Wed Sep 22 2021 14:09:15 GMT-0500 (CDT)",
+		"database" : "samples",
+		"collections" : [
+			{
+				"collection_name" : "products",
+				"cached" : 227,
+				"indexes" : [
+					{
+						"index_name" : "name_1",
+						"cached" : 227
+					},
+					{
+						"index_name" : "_id",
+						"cached" : 227
+					}
+				]
+			},
+			{
+				"collection_name" : "system.views",
+				"cached" : 227,
+				"indexes" : [
+					{
+						"index_name" : "_id",
+						"cached" : 227
+					}
+				]
+			},
+			{
+				"collection_name" : "grades",
+				"cached" : 392,
+				"indexes" : [
+					{
+						"index_name" : "_id",
+						"cached" : 227
+					},
+					{
+						"index_name" : "student_id_1",
+						"cached" : 227
+					},
+					{
+						"index_name" : "class_id_1",
+						"cached" : 227
+					},
+					{
+						"index_name" : "type_1_score_1",
+						"cached" : 227
+					}
+				]
+			}
+		]
+	}
+ */
+
+/**
+ * Returns a cache report object with all cache details for all collections
+ * and all indexes for each collection
+ * @param dbName
+ * @return cacheReport
+ */
+function getCacheReportObj(dbName) {
+	var cacheReport = new Object();
+	var hostInfo = db.hostInfo()
+	cacheReport.captureDate = hostInfo.system.currentTime;
+	cacheReport.captureHost = hostInfo.system.hostname;
+
+	db = db.getSiblingDB(dbName);
+	cacheReport.database = dbName;
+
+	var totalCache = db.serverStatus()['wiredTiger']['cache']["bytes currently in the cache"];
+	cacheReport.total_cache_size = totalCache;
+
+	var collNames = db.getCollectionNames();
+	var collCached = [];
+	for(let collName of collNames){
+		var cc = getCollCached(collName)
+		collCached.push({cn: collName, cached: cc});
+	}
+
+	collCached.sort(function(a,b) {return a.cached > b.cached});
+
+	var totalCacheDB = 0;
+	cacheReport.collections = [];
+	for(let x of collCached) {
+		var cacheCollection = new Object();
+		// append the collection cache fields
+		var indexCached = getIndexCachedArray(x.cn);
+		cacheCollection.collection_name = x.cn;
+		cacheCollection.collection_cached_bytes = x.cached;
+		cacheCollection.indexes = [];
+
+		totalCacheDB += x.cached;
+		// append the index cache elements
+		for(let i = 0; i < indexCached.length; i++)	{
+
+			cacheCollection.indexes.push(
+				{
+					"index_name": indexCached[i].idxName,
+					"index_cached_bytes": indexCached[i].cachedBytes
+				}
+			)
+			totalCacheDB += indexCached[i].cachedBytes;
+		}
+		cacheCollection.total_collection_cache_usage = totalCacheDB
+		cacheCollection.collect_cache_usage_percent = totalCacheDB / totalCache * 100
+		cacheReport.collections.push(cacheCollection);
+	}
+
+	return cacheReport;
+}
+
 /**
  * Produces a cache report of for all collections and indexes in
  * the specified database
@@ -228,4 +341,12 @@ function cacheReport(scope="current") {
 }
 
 // main
-cacheReport();
+print("To print cache report:");
+print("\texecute: 'cacheReport()' with 'current' db 'all' DBs or <db name>.");
+print();
+print("To write the cache report to a database:");
+print("\texecute: ");
+print("\t\tvar cacheConn = new Mongo(<connection URI>)");
+print("\t\tvar cacheDB = cacheConn('dba') // use whatever DB name you'd like");
+print("\t\t'writeCacheReport(cacheDB)' passing a Mongo connection")
+
