@@ -192,7 +192,7 @@ function dbCacheReport(dbName) {
 			}
 		}
 	print();
-	print(`\tUses ${cachedPercentString(totalCacheSize, totalCachedDBObj)}% of total cache of ${humanReadableNumber(totalCacheSize)}`);
+	print(`\tUses ${cachedPercentString(totalCacheSize, totalCachedDBObj)}% of bytes in cache of ${humanReadableNumber(totalCacheSize)} and ${cachedPercentString(configuredCache, totalCachedDBObj)}% of configured cache of ${humanReadableNumber(configuredCache)}`);
 
 }
 
@@ -202,7 +202,12 @@ function dbCacheReport(dbName) {
  */
 function cacheReport(scope="current") {
 	var dt = Date();
-	print(`date:\t\t${dt}`);
+	print(`date:\t\t\t${dt}`);
+	var ram = Math.ceil(db.hostInfo().system.memSizeMB / 1024)
+	print(`Host RAM:\t\t${ram} GB`)
+	var serverStatus = db.serverStatus();
+	configuredCache = serverStatus['wiredTiger']['cache']["maximum bytes configured"];
+	print(`Configured Cache:\t${humanReadableNumber(configuredCache)}\n`);
 	switch(scope) {
 		case "current":
 			var dbName = db._name;
