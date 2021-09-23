@@ -284,11 +284,23 @@ function cacheReport(scope="current") {
 function writeCacheReport(dbase) {
 	let adminDBs = ['admin','config','local'];
 	print("Sending cache report for:");
+	let ctn = true;
 	db.adminCommand('listDatabases').databases.forEach(function(d) {
-		if(! adminDBs.includes(d.name)){
+		if(! adminDBs.includes(d.name) && ctn){
 			print(`\t${d.name} database`);
 			let cr = getCacheReportObj(d.name);
-			dbase.cache_usage_history.insertOne(cr);
+			try {
+				dbase.cache_usage_history.insertOne(cr);
+			}
+			catch(e) {
+				if(e instanceof TypeError) {
+					print('verify that the argument is a database object');
+					ctn = false;
+				}
+				else {
+					throw e;
+				}
+			}
 		}
 	})
 }
