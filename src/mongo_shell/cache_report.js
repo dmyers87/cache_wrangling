@@ -20,7 +20,7 @@
 function pad(width, string) {
 	// assert(typeof width === "number", 'width arg must be number');
 	// assert(typeof string === "string", 'string arg must be string');
-	var padded = "";
+	let padded = "";
 	if(width >= string.length) {
 		padded = string.padStart(width);
 	}
@@ -45,21 +45,21 @@ function niceNum(n) {
  *    each with indexName and cachedBytes
  */
 function getIndexCachedArray(collName) {
-	var indexCachedArray = [];
+	let indexCachedArray = [];
 
 	try {
 		var	indexStats = db[collName].stats({indexDetails:true});
 	}
 	catch(e) {
 		if(e instanceof TypeError) { // may be special collection or a view
-		return indexCachedArray;
+			return indexCachedArray;
 		}
 	}
 	// See https://docs.mongodb.com/v4.0/reference/method/db.collection.stats/
 	if(typeof indexStats['indexDetails'] !== 'undefined') {
 		Object.keys(indexStats.indexSizes).forEach(
 			function(d) {
-				var bcic = indexStats['indexDetails'][d]['cache']["bytes currently in the cache"]
+				let bcic = indexStats['indexDetails'][d]['cache']["bytes currently in the cache"]
 				indexCachedArray.push({idxName: d, cachedBytes:bcic});
 			}
 		)
@@ -75,7 +75,7 @@ function getIndexCachedArray(collName) {
  */
 function getCollCached(collName) {
 	try {
-		var stats = db[collName].stats();
+		let stats = db[collName].stats();
 		if(typeof stats['wiredTiger'] !== 'undefined') {
 			return stats['wiredTiger']['cache']["bytes currently in the cache"]
 		}
@@ -98,9 +98,9 @@ function getCollCached(collName) {
  * @return returns a formatted string
  */
 function humanReadableNumber(num) {
-	var aMB = Math.pow(1024, 2);
-	var aGB = Math.pow(1024, 3);
-	var rtnNum = "0";
+	let aMB = Math.pow(1024, 2);
+	let aGB = Math.pow(1024, 3);
+	let rtnNum = "0";
 	if(num > aGB) {
 		rtnNum = niceNum(parseFloat((num/aGB).toFixed(2))) + " gb";
 	}
@@ -119,8 +119,8 @@ function humanReadableNumber(num) {
  * @return string containing the percent
  */
 function cachedPercentString(totalCachedNum, cachedNum) {
-	var c = cachedNum / totalCachedNum * 100;
-	var rtnStr = "";
+	let c = cachedNum / totalCachedNum * 100;
+	let rtnStr = "";
 	if(c > 0.01) {
 		rtnStr = c.toFixed(2).toString();
 	}
@@ -130,62 +130,6 @@ function cachedPercentString(totalCachedNum, cachedNum) {
 	return rtnStr;
 }
 
-/*
-	example cache report obj
-	{
-		"captureDate" : "Wed Sep 22 2021 14:09:15 GMT-0500 (CDT)",
-		"database" : "samples",
-		"collections" : [
-			{
-				"collection_name" : "products",
-				"cached" : 227,
-				"indexes" : [
-					{
-						"index_name" : "name_1",
-						"cached" : 227
-					},
-					{
-						"index_name" : "_id",
-						"cached" : 227
-					}
-				]
-			},
-			{
-				"collection_name" : "system.views",
-				"cached" : 227,
-				"indexes" : [
-					{
-						"index_name" : "_id",
-						"cached" : 227
-					}
-				]
-			},
-			{
-				"collection_name" : "grades",
-				"cached" : 392,
-				"indexes" : [
-					{
-						"index_name" : "_id",
-						"cached" : 227
-					},
-					{
-						"index_name" : "student_id_1",
-						"cached" : 227
-					},
-					{
-						"index_name" : "class_id_1",
-						"cached" : 227
-					},
-					{
-						"index_name" : "type_1_score_1",
-						"cached" : 227
-					}
-				]
-			}
-		]
-	}
- */
-
 /**
  * Returns a cache report object with all cache details for all collections
  * and all indexes for each collection
@@ -193,37 +137,36 @@ function cachedPercentString(totalCachedNum, cachedNum) {
  * @return cacheReport
  */
 function getCacheReportObj(dbName) {
-	var cacheReport = new Object();
-	var hostInfo = db.hostInfo()
-	cacheReport.captureDate = hostInfo.system.currentTime;
-	cacheReport.captureHost = hostInfo.system.hostname;
+	let cacheReport = new Object();
+	cacheReport.systemInfo = db.hostInfo().system;
 
-	db = db.getSiblingDB(dbName);
+	cached_db = db.getSiblingDB(dbName);
 	cacheReport.database = dbName;
 
-	var totalCache = db.serverStatus()['wiredTiger']['cache']["bytes currently in the cache"];
+	let totalCache = cached_db.serverStatus()['wiredTiger']['cache']["bytes currently in the cache"];
 	cacheReport.total_cache_size = totalCache;
 
-	var collNames = db.getCollectionNames();
-	var collCached = [];
+	let collNames = cached_db.getCollectionNames();
+	let collCached = [];
 	for(let collName of collNames){
-		var cc = getCollCached(collName)
+		let cc = getCollCached(collName)
 		collCached.push({cn: collName, cached: cc});
 	}
 
 	collCached.sort(function(a,b) {return a.cached > b.cached});
 
-	var totalCacheDB = 0;
+	let totalCacheDB = 0;
 	cacheReport.collections = [];
 	for(let x of collCached) {
-		var cacheCollection = new Object();
+		let cacheCollection = new Object();
 		// append the collection cache fields
-		var indexCached = getIndexCachedArray(x.cn);
 		cacheCollection.collection_name = x.cn;
 		cacheCollection.collection_cached_bytes = x.cached;
 		cacheCollection.indexes = [];
 
 		totalCacheDB += x.cached;
+
+		let indexCached = getIndexCachedArray(x.cn);
 		// append the index cache elements
 		for(let i = 0; i < indexCached.length; i++)	{
 
@@ -236,7 +179,7 @@ function getCacheReportObj(dbName) {
 			totalCacheDB += indexCached[i].cachedBytes;
 		}
 		cacheCollection.total_collection_cache_usage = totalCacheDB
-		cacheCollection.collect_cache_usage_percent = totalCacheDB / totalCache * 100
+		cacheCollection.collection_cache_usage_percent = totalCacheDB / totalCache * 100
 		cacheReport.collections.push(cacheCollection);
 	}
 
@@ -249,72 +192,63 @@ function getCacheReportObj(dbName) {
  * @param dbName name of database
  */
 function dbCacheReport(dbName) {
-	db = db.getSiblingDB(dbName);
-	print(`DB name:\t${db._name}`)
-	// need clusterMonitor role to get the total size of cache data (serverStatus privilege)
-	var totalCacheSize = db.serverStatus()['wiredTiger']['cache']["bytes currently in the cache"];
+	cached_db = db.getSiblingDB(dbName);
+	print(`DB name:\t${cached_db._name}`)
 	print();
 
-	var collNameSize = 20;
-	var collNameHeader = pad(collNameSize, "COLL NAME")
-	var collCachedSize = 12;
-	var collCachedHeader = pad(collCachedSize, "CACHED")
-	var collCachedPercentSize = 6;
-	var collCachedPHeader = pad(collCachedPercentSize, "%")
-	var indexNameSize = 20
-	var indexNameHeader = pad(indexNameSize, "INDEX NAME")
-	var indexCachedSize = 12;
-	var indexCachedHeader = pad(indexCachedSize, "CACHED")
-	var indexCachedPercentSize = 6;
-	var indexCachedPHeader = pad(indexCachedPercentSize, "%")
+	let collNameSize = 20;
+	let collNameHeader = pad(collNameSize, "COLL NAME")
+	let collCachedSize = 12;
+	let collCachedHeader = pad(collCachedSize, "CACHED")
+	let collCachedPercentSize = 6;
+	let collCachedPHeader = pad(collCachedPercentSize, "%")
+	let indexNameSize = 20
+	let indexNameHeader = pad(indexNameSize, "INDEX NAME")
+	let indexCachedSize = 12;
+	let indexCachedHeader = pad(indexCachedSize, "CACHED")
+	let indexCachedPercentSize = 6;
+	let indexCachedPHeader = pad(indexCachedPercentSize, "%")
 	print(`${collNameHeader} ${collCachedHeader} ${collCachedPHeader} ${indexNameHeader} ${indexCachedHeader} ${indexCachedPHeader} `);
 
-	var collNames = db.getCollectionNames();
-	var collCached = [];
-	for(let collName of collNames){
-			var cc = getCollCached(collName)
-			collCached.push({cn: collName, cached: cc});
-		}
-
-	collCached.sort(function(a,b) {return a.cached > b.cached});
-	var totalCachedDBObj = 0;
-	for(let x of collCached) {
-			var indexCached = getIndexCachedArray(x.cn);
-			for(let i = 0; i < indexCached.length; i++)	{
-				if(i === 0) {
-					print(pad(collNameSize, x.cn) + ' '
-					  + pad(collCachedSize, humanReadableNumber(x.cached)) + ' '
-						+ pad(collCachedPercentSize, cachedPercentString(totalCacheSize, x.cached)) + ' '
-						+ pad(indexNameSize, indexCached[i].idxName) + ' '
-						+ pad(indexCachedSize, humanReadableNumber(indexCached[i].cachedBytes)) + ' '
-						+ pad(indexCachedPercentSize, cachedPercentString(totalCacheSize, indexCached[i].cachedBytes))
-					);
-					totalCachedDBObj += x.cached;
-					totalCachedDBObj += indexCached[i].cachedBytes;
-				}
-				else {
-					print(pad(collNameSize, ' -') + ' '
-						+ pad(collCachedSize, ' ') + ' '
-						+ pad(collCachedPercentSize, ' ') + ' '
-						+ pad(indexNameSize, indexCached[i].idxName) + ' '
-						+ pad(indexCachedSize, humanReadableNumber(indexCached[i].cachedBytes)) + ' '
-						+ pad(indexCachedPercentSize, cachedPercentString(totalCacheSize, indexCached[i].cachedBytes))
-					);
-					totalCachedDBObj += indexCached[i].cachedBytes;
-				}
+	let cacheReport = getCacheReportObj(dbName);
+	let totalCacheSize = cacheReport.total_cache_size;
+	let collCached = cacheReport.collections;
+	for(let coll of collCached) {
+		let indexCached = coll.indexes;
+		let indexIdxLen = indexCached.length;
+		for(let i = 0; i < indexIdxLen; i++)	{
+			if(i === 0) {
+				print(pad(collNameSize, coll.collection_name) + ' '
+					+ pad(collCachedSize, humanReadableNumber(coll.collection_cached_bytes)) + ' '
+					+ pad(collCachedPercentSize, cachedPercentString(totalCacheSize, coll.collection_cached_bytes)) + ' '
+					+ pad(indexNameSize, indexCached[i].index_name) + ' '
+					+ pad(indexCachedSize, humanReadableNumber(indexCached[i].index_cached_bytes)) + ' '
+					+ pad(indexCachedPercentSize, cachedPercentString(totalCacheSize, indexCached[i].index_cached_bytes))
+				);
+			}
+			else {
+				print(pad(collNameSize, ' -') + ' '
+					+ pad(collCachedSize, ' ') + ' '
+					+ pad(collCachedPercentSize, ' ') + ' '
+					+ pad(indexNameSize, indexCached[i].index_name) + ' '
+					+ pad(indexCachedSize, humanReadableNumber(indexCached[i].index_cached_bytes)) + ' '
+					+ pad(indexCachedPercentSize, cachedPercentString(totalCacheSize, indexCached[i].index_cached_bytes))
+				);
 			}
 		}
+	}
 	print();
-	print(`\tUses ${cachedPercentString(totalCacheSize, totalCachedDBObj)}% of total cache of ${humanReadableNumber(totalCacheSize)}`);
+	print(`\tUses ${cachedPercentString(totalCacheSize, collCached.total_collection_cache_usage)}% of total cache of ${humanReadableNumber(totalCacheSize)}`);
 
 }
+
 
 /**
  * produce cache usage report
  * @param scope "current" database or "all" databases
  */
 function cacheReport(scope="current") {
-	var dt = Date();
+	let dt = Date();
 	print(`date:\t\t${dt}`);
 	switch(scope) {
 		case "current":
@@ -323,7 +257,7 @@ function cacheReport(scope="current") {
 			break;
 
 		case "all":
-			var adminDBs = ['admin','config','local'];
+			let adminDBs = ['admin','config','local'];
 			db.adminCommand('listDatabases').databases.forEach(function(d) {
 				if(! adminDBs.includes(d.name)){
 					dbCacheReport(d.name);
@@ -340,13 +274,33 @@ function cacheReport(scope="current") {
 	}
 }
 
+/**
+ * Writes cacheReport objects to the 'cache_usage_history' collection in the specified database
+ * @param dbase, a database reference, albeit local or remote
+ * Ex:
+ *   dba_db = connect("mongodb+srv://<un>>:<pw>@<cluster FQDN>/<target DB>>")
+ *   writeCacheReport(dba_db)
+ */
+function writeCacheReport(dbase) {
+	let adminDBs = ['admin','config','local'];
+	print("Sending cache report for:");
+	db.adminCommand('listDatabases').databases.forEach(function(d) {
+		if(! adminDBs.includes(d.name)){
+			print(`\t${d.name} database`);
+			let cr = getCacheReportObj(d.name);
+			dbase.cache_usage_history.insertOne(cr);
+		}
+	})
+}
+
 // main
 print("To print cache report:");
 print("\texecute: 'cacheReport()' with 'current' db 'all' DBs or <db name>.");
 print();
 print("To write the cache report to a database:");
 print("\texecute: ");
-print("\t\tvar cacheConn = new Mongo(<connection URI>)");
-print("\t\tvar cacheDB = cacheConn('dba') // use whatever DB name you'd like");
+print("\t\t// Setup a connection URI to the destination of cache reports, including target database")
+print("\t\tlet cacheDB = connect(<connection URI>)");
+print("\t\t// cache documents to be written to 'cache_usage_history' collection")
 print("\t\t'writeCacheReport(cacheDB)' passing a Mongo connection")
 
