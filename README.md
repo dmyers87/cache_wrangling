@@ -14,7 +14,7 @@ What steps would need to be taken to determine what databases, collections, and 
 
 The work in this repo seeks to explain methods and techniques for using cache metrics to solve performance problems.
 ## Usage
-The initial iteration of the cache wrangler consists of a [cache_report.js](src/mongo_shell/cache_report.js) script desinged to be run from the Mongo shell.
+The initial iteration of the cache wrangler consists of a [cache_report.js](src/mongo_shell/cache_report.js) script designed to be run from the Mongo shell.
 
 To run the cache report, simply connect to the cluster of interest and load the script. By default, the script will report on the current database in use. 
 
@@ -37,21 +37,18 @@ DB name:	sample_training
 Once the script is loaded, you can execute the `cacheReport()` against 'all' databases or a specified database, for example:
 
 ```zsh
-Atlas atlas-138n6w-shard-0 [primary] sample_airbnb> cacheReport('sample_training')
-date:		Thu Sep 23 2021 09:19:37 GMT-0400 (Eastern Daylight Time)
-DB name:	sample_training
+Atlas atlas-138n6w-shard-0 [primary] sample-airbnb> cacheReport('sample_airbnb')
+date:		Thu Sep 23 2021 09:23:10 GMT-0400 (Eastern Daylight Time)
+DB name:	sample_airbnb
 
            COLL NAME       CACHED      %           INDEX NAME       CACHED      %
-              grades     25.72 mb  14.18                 _id_       421  b lt .01
-              routes       397  b lt .01                 _id_       420  b lt .01
-         inspections       481  b lt .01                 _id_       421  b lt .01
-               posts    13,914  b lt .01                 _id_       227  b lt .01
-               trips    13,088  b lt .01                 _id_    16,479  b lt .01
-           companies       395  b lt .01                 _id_       697  b lt .01
-                zips     4,594  b lt .01                 _id_    35,244  b   0.02
+  listingsAndReviews      97.6 mb  53.81                 _id_   130,041  b   0.07
+                   -                     property_type_1_r...    92,035  b   0.05
+                   -                                   name_1     1,488  b lt .01
+                   -                     address.location_...    56,855  b   0.03
 
-	Uses 14.23% of total cache of 181.36 mb
+	Uses 53.95% of total cache of 181.39 mb
 ```
-## Intrepreting the Results
-The report
+## Interpreting the Results
+The report specifies cache usage by database collection, including the collection's associated indexes. For the `sample_airbnb` database above, the collection is consuming `97.6 mb` or `53.81%` of the available cache. The indexes consume about another `0.25 mb` of cache for a total `53.95%` of cache consumed by this database.
 
