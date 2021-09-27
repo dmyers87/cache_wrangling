@@ -192,12 +192,9 @@ function getCacheReportObj(dbName) {
  * Produces a cache report of for all collections and indexes in
  * the specified database
  * @param dbName name of database
+ * @param printSummary whether to print summary info, default true
  */
-function dbCacheReport(dbName) {
-	cached_db = db.getSiblingDB(dbName);
-	print(`DB name:\t${cached_db._name}`)
-	print();
-
+function dbCacheReport(dbName, printSummary = true) {
 	let collNameSize = 20;
 	let collNameHeader = pad(collNameSize, "COLL NAME")
 	let collCachedSize = 12;
@@ -210,12 +207,22 @@ function dbCacheReport(dbName) {
 	let indexCachedHeader = pad(indexCachedSize, "CACHED")
 	let indexCachedPercentSize = 6;
 	let indexCachedPHeader = pad(indexCachedPercentSize, "%")
-	print(`${collNameHeader} ${collCachedHeader} ${collCachedPHeader} ${indexNameHeader} ${indexCachedHeader} ${indexCachedPHeader} `);
 
 	let cacheReport = getCacheReportObj(dbName);
 	let totalCacheUsed = cacheReport.total_cache_used;
 	let totalCacheConfig = cacheReport.total_cache_configured;
 	let totalCacheUsedDB = 0;
+
+	if(printSummary) {
+		print();
+		print(`\tThis MongoDB process uses ${cachedPercentString(totalCacheConfig, totalCacheUsed)}% of total cache configured of ${humanReadableNumber(totalCacheConfig)}`);
+		print();
+	}
+	cached_db = db.getSiblingDB(dbName);
+	print(`DB name:\t${cached_db._name}`)
+	print();
+	print(`${collNameHeader} ${collCachedHeader} ${collCachedPHeader} ${indexNameHeader} ${indexCachedHeader} ${indexCachedPHeader} `);
+
 	let collCached = cacheReport.collections;
 	for(let coll of collCached) {
 		let indexCached = coll.indexes;
@@ -247,7 +254,6 @@ function dbCacheReport(dbName) {
 	print();
 	print(`\t"${dbName}" uses ${cachedPercentString(totalCacheUsed, totalCacheUsedDB)}% of total cache used of ${humanReadableNumber(totalCacheUsed)}`);
 	print(`\t"${dbName}" uses ${cachedPercentString(totalCacheConfig, totalCacheUsedDB)}% of total cache configured of ${humanReadableNumber(totalCacheConfig)}`);
-	print(`\tThis MongoDB process uses ${cachedPercentString(totalCacheConfig, totalCacheUsed)}% of total cache configured of ${humanReadableNumber(totalCacheConfig)}`);
 }
 
 
@@ -265,11 +271,13 @@ function cacheReport(scope="current") {
 			break;
 
 		case "all":
+			let firstTime = true;
 			let adminDBs = ['admin','config','local'];
 			db.adminCommand('listDatabases').databases.forEach(function(d) {
 				if(! adminDBs.includes(d.name)){
-					dbCacheReport(d.name);
+					dbCacheReport(d.name, firstTime);
 					print("**********");
+					firstTime = false;
 				}
 			})
 			break;
@@ -288,17 +296,23 @@ function cacheReport(scope="current") {
  * Ex:
  *   dba_db = connect("mongodb+srv://<un>>:<pw>@<cluster FQDN>/<target DB>>")
  *   writeCacheReport(dba_db)
+ * All cache readings produced by this method have the same cache_reading_id
  */
 function writeCacheReport(dbase) {
 	let adminDBs = ['admin','config','local'];
+	let cacheDB = 'cache_usage_history';
 	print("Sending cache report for:");
 	let ctn = true;
+	let readingId = new ObjectId();
 	db.adminCommand('listDatabases').databases.forEach(function(d) {
 		if(! adminDBs.includes(d.name) && ctn){
 			print(`\t${d.name} database`);
+			// get cache report object
 			let cr = getCacheReportObj(d.name);
+			// enable grouping cache reports by readingId
+			cr.cache_reading_id = readingId;
 			try {
-				dbase.cache_usage_history.insertOne(cr);
+				dbase[cacheDB].insertOne(cr);
 			}
 			catch(e) {
 				if(e instanceof TypeError) {
