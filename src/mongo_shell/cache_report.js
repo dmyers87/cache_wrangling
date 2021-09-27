@@ -215,6 +215,7 @@ function dbCacheReport(dbName) {
 	let cacheReport = getCacheReportObj(dbName);
 	let totalCacheUsed = cacheReport.total_cache_used;
 	let totalCacheConfig = cacheReport.total_cache_configured;
+	let totalCacheUsedDB = 0;
 	let collCached = cacheReport.collections;
 	for(let coll of collCached) {
 		let indexCached = coll.indexes;
@@ -228,6 +229,8 @@ function dbCacheReport(dbName) {
 					+ pad(indexCachedSize, humanReadableNumber(indexCached[i].index_cached_bytes)) + ' '
 					+ pad(indexCachedPercentSize, cachedPercentString(totalCacheUsed, indexCached[i].index_cached_bytes))
 				);
+				totalCacheUsedDB += coll.collection_cached_bytes;
+				totalCacheUsedDB += indexCached[i].index_cached_bytes;
 			}
 			else {
 				print(pad(collNameSize, ' -') + ' '
@@ -237,12 +240,14 @@ function dbCacheReport(dbName) {
 					+ pad(indexCachedSize, humanReadableNumber(indexCached[i].index_cached_bytes)) + ' '
 					+ pad(indexCachedPercentSize, cachedPercentString(totalCacheUsed, indexCached[i].index_cached_bytes))
 				);
+				totalCacheUsedDB += indexCached[i].index_cached_bytes;
 			}
 		}
 	}
 	print();
-	print(`\t"${dbName}" uses ${cachedPercentString(totalCacheUsed, collCached.total_collection_cache_usage)}% of total cache used of ${humanReadableNumber(totalCacheUsed)}`);
-	print(`\tDB Instance uses ${cachedPercentString(totalCacheConfig, totalCacheUsed)}% of total cache configured of ${humanReadableNumber(totalCacheConfig)}`);
+	print(`\t"${dbName}" uses ${cachedPercentString(totalCacheUsed, totalCacheUsedDB)}% of total cache used of ${humanReadableNumber(totalCacheUsed)}`);
+	print(`\t"${dbName}" uses ${cachedPercentString(totalCacheConfig, totalCacheUsedDB)}% of total cache configured of ${humanReadableNumber(totalCacheConfig)}`);
+	print(`\tThis MongoDB process uses ${cachedPercentString(totalCacheConfig, totalCacheUsed)}% of total cache configured of ${humanReadableNumber(totalCacheConfig)}`);
 }
 
 
