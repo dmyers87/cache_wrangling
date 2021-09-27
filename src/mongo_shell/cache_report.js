@@ -35,7 +35,7 @@ function pad(width, string) {
  * @return formatted string
  */
 function niceNum(n) {
-	assert(typeof n === "number", 'n arg must be number');
+	// assert(typeof n === "number", 'n arg must be number');
 	return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
 }
 
@@ -143,8 +143,10 @@ function getCacheReportObj(dbName) {
 	cached_db = db.getSiblingDB(dbName);
 	cacheReport.database = dbName;
 
-	let totalCache = cached_db.serverStatus()['wiredTiger']['cache']["bytes currently in the cache"];
-	cacheReport.total_cache_size = totalCache;
+	let totalCacheUsed = cached_db.serverStatus()['wiredTiger']['cache']["bytes currently in the cache"];
+	cacheReport.total_cache_used = totalCacheUsed;
+	let totalCacheConfig = cached_db.serverStatus()['wiredTiger']['cache']["maximum bytes configured"];
+	cacheReport.total_cache_configured = totalCacheConfig;
 
 	let collNames = cached_db.getCollectionNames();
 	let collCached = [];
@@ -179,7 +181,7 @@ function getCacheReportObj(dbName) {
 			totalCacheDB += indexCached[i].cachedBytes;
 		}
 		cacheCollection.total_collection_cache_usage = totalCacheDB
-		cacheCollection.collection_cache_usage_percent = totalCacheDB / totalCache * 100
+		cacheCollection.collection_cache_usage_percent = totalCacheDB / totalCacheUsed * 100
 		cacheReport.collections.push(cacheCollection);
 	}
 
@@ -211,7 +213,8 @@ function dbCacheReport(dbName) {
 	print(`${collNameHeader} ${collCachedHeader} ${collCachedPHeader} ${indexNameHeader} ${indexCachedHeader} ${indexCachedPHeader} `);
 
 	let cacheReport = getCacheReportObj(dbName);
-	let totalCacheSize = cacheReport.total_cache_size;
+	let totalCacheUsed = cacheReport.total_cache_used;
+	let totalCacheConfig = cacheReport.total_cache_configured;
 	let collCached = cacheReport.collections;
 	for(let coll of collCached) {
 		let indexCached = coll.indexes;
@@ -220,10 +223,10 @@ function dbCacheReport(dbName) {
 			if(i === 0) {
 				print(pad(collNameSize, coll.collection_name) + ' '
 					+ pad(collCachedSize, humanReadableNumber(coll.collection_cached_bytes)) + ' '
-					+ pad(collCachedPercentSize, cachedPercentString(totalCacheSize, coll.collection_cached_bytes)) + ' '
+					+ pad(collCachedPercentSize, cachedPercentString(totalCacheUsed, coll.collection_cached_bytes)) + ' '
 					+ pad(indexNameSize, indexCached[i].index_name) + ' '
 					+ pad(indexCachedSize, humanReadableNumber(indexCached[i].index_cached_bytes)) + ' '
-					+ pad(indexCachedPercentSize, cachedPercentString(totalCacheSize, indexCached[i].index_cached_bytes))
+					+ pad(indexCachedPercentSize, cachedPercentString(totalCacheUsed, indexCached[i].index_cached_bytes))
 				);
 			}
 			else {
@@ -232,14 +235,14 @@ function dbCacheReport(dbName) {
 					+ pad(collCachedPercentSize, ' ') + ' '
 					+ pad(indexNameSize, indexCached[i].index_name) + ' '
 					+ pad(indexCachedSize, humanReadableNumber(indexCached[i].index_cached_bytes)) + ' '
-					+ pad(indexCachedPercentSize, cachedPercentString(totalCacheSize, indexCached[i].index_cached_bytes))
+					+ pad(indexCachedPercentSize, cachedPercentString(totalCacheUsed, indexCached[i].index_cached_bytes))
 				);
 			}
 		}
 	}
 	print();
-	print(`\tUses ${cachedPercentString(totalCacheSize, collCached.total_collection_cache_usage)}% of total cache of ${humanReadableNumber(totalCacheSize)}`);
-
+	print(`\t"${dbName}" uses ${cachedPercentString(totalCacheUsed, collCached.total_collection_cache_usage)}% of total cache used of ${humanReadableNumber(totalCacheUsed)}`);
+	print(`\tDB Instance uses ${cachedPercentString(totalCacheConfig, totalCacheUsed)}% of total cache configured of ${humanReadableNumber(totalCacheConfig)}`);
 }
 
 
