@@ -40,15 +40,16 @@ function niceNum(n) {
 }
 
 /**
+ * @param dbRef database object
  * @param collName collection name
  * @return returns an array object objects
  *    each with indexName and cachedBytes
  */
-function getIndexCachedArray(collName) {
+function getIndexCachedArray(dbRef, collName) {
 	let indexCachedArray = [];
 
 	try {
-		var	indexStats = db[collName].stats({indexDetails:true});
+		var	indexStats = dbRef[collName].stats({indexDetails:true});
 	}
 	catch(e) {
 		if(e instanceof TypeError) { // may be special collection or a view
@@ -168,7 +169,7 @@ function getCacheReportObj(dbName) {
 
 		totalCacheDB += x.cached;
 
-		let indexCached = getIndexCachedArray(x.cn);
+		let indexCached = getIndexCachedArray(cached_db, x.cn);
 		// append the index cache elements
 		for(let i = 0; i < indexCached.length; i++)	{
 
@@ -212,12 +213,12 @@ function dbCacheReport(dbName, printSummary = true) {
 	let totalCacheUsed = cacheReport.total_cache_used;
 	let totalCacheConfig = cacheReport.total_cache_configured;
 	let totalCacheUsedDB = 0;
-
 	if(printSummary) {
 		print();
 		print(`\tThis MongoDB process uses ${cachedPercentString(totalCacheConfig, totalCacheUsed)}% of total cache configured of ${humanReadableNumber(totalCacheConfig)}`);
 		print();
 	}
+	// get cache report
 	cached_db = db.getSiblingDB(dbName);
 	print(`DB name:\t${cached_db._name}`)
 	print();
