@@ -20,35 +20,70 @@ To run the cache report, simply connect to the cluster of interest and load the 
 
 ```zsh
 Atlas atlas-138n6w-shard-0 [primary] sample_training> load('cache_report.js')
-date:		Thu Sep 23 2021 09:22:27 GMT-0400 (Eastern Daylight Time)
+date:		Wed Sep 29 2021 14:27:04 GMT-0500 (Central Daylight Time)
+
+	This MongoDB process uses 72.70% of total cache configured of 256 mb
+
 DB name:	sample_training
 
-           COLL NAME       CACHED      %           INDEX NAME       CACHED      %
-              grades     25.72 mb  14.18                 _id_       421  b lt .01
-              routes       397  b lt .01                 _id_       420  b lt .01
+           COLL NAME       CACHED      %           INDEX NAME       CACHED      % 
+              grades     25.73 mb  13.83                 _id_       421  b lt .01
+              routes    83,940  b   0.04                 _id_      1.46 mb   0.78
          inspections       481  b lt .01                 _id_       421  b lt .01
                posts    13,914  b lt .01                 _id_       227  b lt .01
-               trips    13,088  b lt .01                 _id_    16,479  b lt .01
-           companies       395  b lt .01                 _id_       697  b lt .01
-                zips     4,594  b lt .01                 _id_    35,244  b   0.02
+               trips     7,561  b lt .01                 _id_    12,173  b lt .01
+           companies       395  b lt .01                 _id_       887  b lt .01
+                zips    11,789  b lt .01                 _id_    43,505  b   0.02
+---------------------------------------------------------------------------------
+                         25.84 mb                                  1.52 mb       
 
-	Uses 14.23% of total cache of 181.39 mb
+	"sample_training" database uses:
+	* 61.19% of total cache used of 186.11 mb for collections
+	* 10.26% of total cache used of 186.11 mb for indexes
+	* 10.69% of total cache configured of 256 mb
+	* 113.87 mb for collections uncompressed
+	* 19.1 mb for indexes
 ```
 Once the script is loaded, you can execute the `cacheReport()` against 'all' databases or a specified database, for example:
 
 ```zsh
 Atlas atlas-138n6w-shard-0 [primary] sample-airbnb> cacheReport('sample_airbnb')
-date:		Thu Sep 23 2021 09:23:10 GMT-0400 (Eastern Daylight Time)
+date:		Wed Sep 29 2021 14:26:09 GMT-0500 (Central Daylight Time)
+
+	This MongoDB process uses 72.70% of total cache configured of 256 mb
+
 DB name:	sample_airbnb
 
-           COLL NAME       CACHED      %           INDEX NAME       CACHED      %
-  listingsAndReviews      97.6 mb  53.81                 _id_   130,041  b   0.07
-                   -                     property_type_1_r...    92,035  b   0.05
-                   -                                   name_1     1,488  b lt .01
-                   -                     address.location_...    56,855  b   0.03
+           COLL NAME       CACHED      %           INDEX NAME       CACHED      % 
+  listingsAndReviews     97.62 mb  52.45                 _id_     2,765  b lt .01
+                   -                     property_type_1_r...    89,348  b   0.05
+                   -                                   name_1   294,179  b   0.15
+                   -                     address.location_...    32,019  b   0.02
+---------------------------------------------------------------------------------
+                         97.62 mb                               418,311  b       
 
-	Uses 53.95% of total cache of 181.39 mb
+	"sample_airbnb" database uses:
+	* 48.35% of total cache used of 186.11 mb for collections
+	* 0.30% of total cache used of 186.11 mb for indexes
+	* 38.29% of total cache configured of 256 mb
+	* 89.99 mb for collections uncompressed
+	* 589,824 b for indexes
+
 ```
 ## Interpreting the Results
-The report specifies cache usage by database collection, including the collection's associated indexes. For the `sample_airbnb` database above, the collection is consuming `97.6 mb` or `53.81%` of the available cache. The indexes consume about another `0.25 mb` of cache for a total `53.95%` of cache consumed by this database.
+Cached collection documents are not compressed.
+
+Indexes are cached using index prefix compression
+
+The cached size for a database can be compared to the total collection and indexes sizes.
+It is possible for the cached capacity to be slightly larger than the total collection and index capacity.
+
+The name of the collection and index is truncated to fit. 
+
+The report specifies cache usage by database collection, including the collection's associated indexes.
+The percentage that the collection or index is used of the available cache is also displayed on each line.
+For the `sample_airbnb` database above, the collection is consuming `97.6 mb` or `48.35%` of the available cache. 
+The indexes consume about another `418,311 b` or `0.30%` of the available cache. 
+One can compare the total collections and indexes for the database to see how much of the collections and indexes are cached.   
+
 

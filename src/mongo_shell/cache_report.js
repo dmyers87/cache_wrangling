@@ -279,7 +279,8 @@ function dbCacheReport(dbName, printSummary = true) {
 
 	print();
 	print(`\t"${dbName}" database uses:`);
-	print(`\t* ${cachedPercentString(totalCacheUsed, totalCacheUsedDB)}% of total cache used of ${humanReadableNumber(totalCacheUsed)}`);
+	print(`\t* ${cachedPercentString(totalCacheUsed, totalDBCollSize)}% of total cache used of ${humanReadableNumber(totalCacheUsed)} for collections`);
+	print(`\t* ${cachedPercentString(totalCacheUsed, totalDBIdxSize)}% of total cache used of ${humanReadableNumber(totalCacheUsed)} for indexes`);
 	print(`\t* ${cachedPercentString(totalCacheConfig, totalCacheUsedDB)}% of total cache configured of ${humanReadableNumber(totalCacheConfig)}`);
 	print(`\t* ${humanReadableNumber(totalDBCollSize).replace('  ', ' ')} for collections uncompressed`)
 	print(`\t* ${humanReadableNumber(totalDBIdxSize).replace('  ', ' ')} for indexes`)
