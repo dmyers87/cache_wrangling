@@ -71,13 +71,14 @@ function getIndexCachedArray(dbRef, collName) {
 
 
 /**
+ * @param dbRef database object
  * @param collName collection name
  * @return returns the size of the collection's cached data
  */
-function getCollCached(collName) {
+function getCollCached(dbRef, collName) {
 	try {
-		let stats = db[collName].stats();
-		if(typeof stats['wiredTiger'] !== 'undefined') {
+		let stats = dbRef[collName].stats();
+		if(typeof stats['wiredTiger'] !== 'undefined') { // may be special collection or a view
 			return stats['wiredTiger']['cache']["bytes currently in the cache"]
 		}
 		else {
@@ -152,7 +153,7 @@ function getCacheReportObj(dbName) {
 	let collNames = cached_db.getCollectionNames();
 	let collCached = [];
 	for(let collName of collNames){
-		let cc = getCollCached(collName)
+		let cc = getCollCached(cached_db, collName)
 		collCached.push({cn: collName, cached: cc});
 	}
 
