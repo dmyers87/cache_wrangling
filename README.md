@@ -86,4 +86,73 @@ For the `sample_airbnb` database above, the collection is consuming `97.6 mb` or
 The indexes consume about another `418,311 b` or `0.30%` of the available cache. 
 One can compare the total collections and indexes for the database to see how much of the collections and indexes are cached.   
 
+You'll also find the total cache consumed by all databases in the cluster at the top of the report. In the report above, the cluster is consuming `72.7%` of the `256 mb` of configured cache.
+
+**A Note About Configured Cache**
+
+It is generally recommended you stick with the cache configuration defaults as there's a delicate balancing act in play between the operating system cache and the MongoDB WiredTiger cache. To learn more see [WiredTiger and Memory Use](https://docs.mongodb.com/manual/core/wiredtiger/#memory-use}). For Atlas, the configution can not be changed. See [Atlas Memory](https://docs.atlas.mongodb.com/sizing-tier-selection/#memory) for details.
+
+---
+## Persisting the Results
+Additionally, the report can persist its findings back to MongoDB. To persist back to the source cluster, set a variable to a database in which you'd like to persist the results. For example:
+
+```
+let cacheDB = db.getSiblingDB("dba")
+```
+If you don't want to contaminate your source cluster with the results data, set the variable to a database in anothter cluster. For example:
+
+```
+let cacheDB = connect("mongodb+srv://*****:*****@cachehistory.mnp7x.mongodb.net/dba)
+```
+
+Once the `cacheDB` variable is set, pass it as a parameter to the writeCacheReport() function:
+```zsh
+writeCacheReport(cacheDB)
+```
+The `writeCacheReport()` function writes to a `cache_report_history` collection in the set cache datbase. A document is created for each database in the cluster, with the following structure:
+```json
+db.cache_usage_history.findOne()
+{
+  _id: ObjectId("6154782abc6d903af09a0c4f"),
+  systemInfo: {
+    currentTime: ISODate("2021-09-29T14:28:57.874Z"),
+    hostname: 'atlas-138n6w-shard-00-02.mnp7x.mongodb.net',
+    cpuAddrSize: 64,
+    memSizeMB: 1695,
+    memLimitMB: 1695,
+    numCores: 1,
+    cpuArch: 'x86_64',
+    numaEnabled: false
+  },
+  database: 'sample_airbnb',
+  total_db_collection_size: 94362191,
+  total_db_index_size: 544768,
+  total_cache_used: 144491407,
+  total_cache_configured: 268435456,
+  collections: [
+    {
+      collection_name: 'listingsAndReviews',
+      collection_cached_bytes: 102340120,
+      indexes: [
+        { index_name: '_id_', index_cached_bytes: 1302 },
+        {
+          index_name: 'property_type_1_room_type_1_beds_1',
+          index_cached_bytes: 34256
+        },
+        { index_name: 'name_1', index_cached_bytes: 290961 },
+        {
+          index_name: 'address.location_2dsphere',
+          index_cached_bytes: 29750
+        }
+      ],
+      total_collection_cache_usage: 102696389,
+      collection_cache_usage_percent: 71.0743919878917
+    }
+  ],
+  cache_reading_id: ObjectId("61547829bc6d903af09a0c4e") }
+}
+  ```
+
+
+
 
