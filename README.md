@@ -20,54 +20,56 @@ To run the cache report, simply connect to the cluster of interest and load the 
 
 ```zsh
 Atlas atlas-138n6w-shard-0 [primary] sample_training> load('cache_report.js')
-date:		Wed Sep 29 2021 14:27:04 GMT-0500 (Central Daylight Time)
+Atlas atlas-138n6w-shard-0 [primary] sample_training> cacheReport()
+date:		Thu Sep 30 2021 14:11:37 GMT-0500 (Central Daylight Time)
 
-	This MongoDB process uses 72.70% of total cache configured of 256 mb
+	This MongoDB process uses 9.64% of total cache configured of 1,024 mb
 
 DB name:	sample_training
 
            COLL NAME       CACHED      %           INDEX NAME       CACHED      % 
-              grades     25.73 mb  13.83                 _id_       421  b lt .01
-              routes    83,940  b   0.04                 _id_      1.46 mb   0.78
-         inspections       481  b lt .01                 _id_       421  b lt .01
-               posts    13,914  b lt .01                 _id_       227  b lt .01
-               trips     7,561  b lt .01                 _id_    12,173  b lt .01
-           companies       395  b lt .01                 _id_       887  b lt .01
-                zips    11,789  b lt .01                 _id_    43,505  b   0.02
+              routes       338  b lt .01                 _id_    20,881  b   0.02
+         inspections       429  b lt .01                 _id_    24,762  b   0.02
+               posts       335  b lt .01                 _id_       244  b lt .01
+           companies       599  b lt .01                 _id_     2,708  b lt .01
+              grades       525  b lt .01                 _id_    30,924  b   0.03
+               trips     7,326  b lt .01                 _id_     3,192  b lt .01
+                zips     6,148  b lt .01                 _id_     9,154  b lt .01
 ---------------------------------------------------------------------------------
-                         25.84 mb                                  1.52 mb       
+                        15,700  b                                91,865  b       
 
 	"sample_training" database uses:
-	* 61.19% of total cache used of 186.11 mb for collections
-	* 10.26% of total cache used of 186.11 mb for indexes
-	* 10.69% of total cache configured of 256 mb
+	* 15,700 b or 0.02% of total cache used of 98.74 mb for collections
 	* 113.87 mb for collections uncompressed
-	* 19.1 mb for indexes
+	* 91,865 b or 0.09% of total cache used of 98.74 mb for indexes
+	* 7.4 mb for indexes
+	* 0.01% of total cache configured of 1,024 mb
 ```
 Once the script is loaded, you can execute the `cacheReport()` against 'all' databases or a specified database, for example:
 
 ```zsh
-Atlas atlas-138n6w-shard-0 [primary] sample-airbnb> cacheReport('sample_airbnb')
-date:		Wed Sep 29 2021 14:26:09 GMT-0500 (Central Daylight Time)
+Atlas atlas-138n6w-shard-0 [primary] sample_training> cacheReport('sample_airbnb')
+date:		Thu Sep 30 2021 14:12:37 GMT-0500 (Central Daylight Time)
 
-	This MongoDB process uses 72.70% of total cache configured of 256 mb
+	This MongoDB process uses 9.66% of total cache configured of 1,024 mb
 
 DB name:	sample_airbnb
 
            COLL NAME       CACHED      %           INDEX NAME       CACHED      % 
-  listingsAndReviews     97.62 mb  52.45                 _id_     2,765  b lt .01
-                   -                     property_type_1_r...    89,348  b   0.05
-                   -                                   name_1   294,179  b   0.15
-                   -                     address.location_...    32,019  b   0.02
+  listingsAndReviews     97.67 mb  98.77                 _id_     1,694  b lt .01
+                   -                     property_type_1_r...       455  b lt .01
+                   -                                   name_1     1,378  b lt .01
+                   -                     address.location_...       542  b lt .01
 ---------------------------------------------------------------------------------
-                         97.62 mb                               418,311  b       
+                         97.67 mb                                 4,069  b       
 
 	"sample_airbnb" database uses:
-	* 48.35% of total cache used of 186.11 mb for collections
-	* 0.30% of total cache used of 186.11 mb for indexes
-	* 38.29% of total cache configured of 256 mb
+	* 97.67 mb or 98.77% of total cache used of 98.88 mb for collections
 	* 89.99 mb for collections uncompressed
-	* 589,824 b for indexes
+	* 4,069 b or lt .01% of total cache used of 98.88 mb for indexes
+	* 602,112 b for indexes
+	* 9.54% of total cache configured of 1,024 mb
+
 
 ```
 ## Interpreting the Results
