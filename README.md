@@ -102,7 +102,7 @@ Once the `cacheDB` variable is set, pass it as a parameter to the writeCacheRepo
 writeCacheReport(cacheDB)
 ```
 The `writeCacheReport()` function writes to a `cache_report_history` collection in the set cache datbase. A document is created for each database in the cluster, with the following structure:
-```json
+```js
 db.cache_usage_history.findOne()
 { _id: ObjectId("6154782abc6d903af09a0c4f"),
   systemInfo: 
