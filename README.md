@@ -152,7 +152,23 @@ db.cache_usage_history.findOne()
   cache_reading_id: ObjectId("61547829bc6d903af09a0c4e") }
 }
   ```
+### Reporting on the persisted results
+We can use the persisted cache report to summarize the cache usage.
 
+Using the database where the "cache_usage_history" documents are written, the [report_top_five_cache_usages.js](src/mongo_shell/report_top_five_cache_usages.js)
+script reports on the top five most cached collections.
 
-
-
+```zsh
+Top Five Cache Usages
+date: Thu Sep 30 2021 11:38:12 GMT-0500 (CDT)
+ 
+             DB NAME            COLL NAME       CACHED      % MAX POSSIBLE 
+       sample_airbnb   listingsAndReviews     97.96 mb  98.81     90.55 mb
+        sample_mflix               movies   559,303  b   0.54     49.74 mb
+     sample_training                 zips    92,990  b   0.09      4.95 mb
+     sample_training            companies    37,696  b   0.04     34.89 mb
+     sample_training                trips    36,414  b   0.04      4.73 mb
+```
+This report lists the collections with the top cache usages, with cache size used, the percent of the available
+cache used, and the max possible cache used if all the collections documents and indexes where cached. 
+Note that it is possible that the cached used by the collection may be larger than total size of the documents and indexes.

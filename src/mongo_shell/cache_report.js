@@ -167,8 +167,12 @@ function getCacheReportObj(dbName) {
 	cacheReport.collections = [];
 	for(let x of collCached) {
 		let cacheCollection = new Object();
-		// append the collection cache fields
 		cacheCollection.collection_name = x.cn;
+		// append collection data size and index size
+		let collStats = cached_db[x.cn].stats();
+		cacheCollection.collection_size = collStats.size;
+		cacheCollection.total_index_size = collStats.totalIndexSize;
+		// append the collection cache fields
 		cacheCollection.collection_cached_bytes = x.cached;
 		cacheCollection.indexes = [];
 
@@ -334,6 +338,9 @@ function writeCacheReport(dbase) {
 	print("Sending cache report for:");
 	let ctn = true;
 	let readingId = new ObjectId();
+	// create index on readings
+	dbase[cacheDB].createIndex({cache_reading_id: 1});
+	// send write cache reports
 	db.adminCommand('listDatabases').databases.forEach(function(d) {
 		if(! adminDBs.includes(d.name) && ctn){
 			print(`\t${d.name} database`);
