@@ -15,14 +15,22 @@
  * Right pad the provided string with the specified character
  * @param width
  * @param string
+ * @param padLeft,
+ * 		true add spaces on the left, or
+ * 		false add space on the right
  * @return {*}
  */
-function pad(width, string) {
+function pad(width, string, padLeft=true) {
 	// assert(typeof width === "number", 'width arg must be number');
 	// assert(typeof string === "string", 'string arg must be string');
 	let padded = "";
 	if(width >= string.length) {
-		padded = string.padStart(width);
+		if(padLeft) {
+			padded = string.padStart(width);
+		}
+		else {
+			padded = string.padEnd(width);
+		}
 	}
 	else {
 		padded = string.substring(0, width - 3) + '...';
@@ -233,7 +241,10 @@ function dbCacheReport(dbName, printSummary = true) {
 	}
 	// get cache report
 	cached_db = db.getSiblingDB(dbName);
-	print(`DB name:\t${cached_db._name}`)
+	print(`${pad(15, 'DB name', false)}: ${pad(20, cached_db._name)}`)
+	print(`${pad(15, 'Collection Size', false)}: ${pad(20, humanReadableNumber(totalDBCollSize))}`)
+	print(`${pad(15, 'Index Size', false)}: ${pad(20, humanReadableNumber(totalDBIdxSize))}`)
+
 	print();
 	print(`${collNameHeader} ${collCachedHeader} ${collCachedPHeader} ${indexNameHeader} ${indexCachedHeader} ${indexCachedPHeader} `);
 
@@ -282,12 +293,17 @@ function dbCacheReport(dbName, printSummary = true) {
 	}
 
 	print();
-	print(`\t"${dbName}" database uses:`);
+	print(`\t"${dbName}" database collections:`);
+	print(`\t* ${cachedPercentString(totalDBCollSize, totalDBCollCacheUsed)}% of the collections are in the cache, consuming`);
 	print(`\t* ${humanReadableNumber(totalDBCollCacheUsed).replace('  ', ' ')} or ${cachedPercentString(totalCacheUsed, totalDBCollCacheUsed)}% of total cache used of ${humanReadableNumber(totalCacheUsed)} for collections`);
-	print(`\t* ${humanReadableNumber(totalDBCollSize).replace('  ', ' ')} for collections uncompressed`)
+	print();
+	print(`\t"${dbName}" database indexes:`);
+	print(`\t* ${cachedPercentString(totalDBIdxSize, totalDBIdxCacheUsed)}% of the indexes are in the cache, consuming`);
 	print(`\t* ${humanReadableNumber(totalDBIdxCacheUsed).replace('  ', ' ')} or ${cachedPercentString(totalCacheUsed, totalDBIdxCacheUsed)}% of total cache used of ${humanReadableNumber(totalCacheUsed)} for indexes`);
-	print(`\t* ${humanReadableNumber(totalDBIdxSize).replace('  ', ' ')} for indexes`)
+	print();
+	print(`\tOverall,"${dbName}" is consuming:`);
 	print(`\t* ${cachedPercentString(totalCacheConfig, totalCacheUsedDB)}% of total cache configured of ${humanReadableNumber(totalCacheConfig)}`);
+
 }
 
 
