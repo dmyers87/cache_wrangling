@@ -15,14 +15,22 @@
  * Right pad the provided string with the specified character
  * @param width
  * @param string
+ * @param padLeft,
+ * 		true add spaces on the left, or
+ * 		false add space on the right
  * @return {*}
  */
-function pad(width, string) {
+function pad(width, string, padLeft=true) {
 	// assert(typeof width === "number", 'width arg must be number');
 	// assert(typeof string === "string", 'string arg must be string');
 	let padded = "";
 	if(width >= string.length) {
-		padded = string.padStart(width);
+		if(padLeft) {
+			padded = string.padStart(width);
+		}
+		else {
+			padded = string.padEnd(width);
+		}
 	}
 	else {
 		padded = string.substring(0, width - 3) + '...';
@@ -142,8 +150,12 @@ function getCacheReportObj(dbName) {
 	let cacheReport = new Object();
 	cacheReport.systemInfo = db.hostInfo().system;
 
-	cached_db = db.getSiblingDB(dbName);
+	let cached_db = db.getSiblingDB(dbName);
 	cacheReport.database = dbName;
+	let totalDBCollSize = cached_db.stats().dataSize;
+	cacheReport.total_db_collection_size = totalDBCollSize;
+	let totalDBIdxSize = cached_db.stats().indexSize;
+	cacheReport.total_db_index_size = totalDBIdxSize;
 
 	let totalCacheUsed = cached_db.serverStatus()['wiredTiger']['cache']["bytes currently in the cache"];
 	cacheReport.total_cache_used = totalCacheUsed;
@@ -163,8 +175,12 @@ function getCacheReportObj(dbName) {
 	cacheReport.collections = [];
 	for(let x of collCached) {
 		let cacheCollection = new Object();
-		// append the collection cache fields
 		cacheCollection.collection_name = x.cn;
+		// append collection data size and index size
+		let collStats = cached_db[x.cn].stats();
+		cacheCollection.collection_size = collStats.size;
+		cacheCollection.total_index_size = collStats.totalIndexSize;
+		// append the collection cache fields
 		cacheCollection.collection_cached_bytes = x.cached;
 		cacheCollection.indexes = [];
 
@@ -211,9 +227,13 @@ function dbCacheReport(dbName, printSummary = true) {
 	let indexCachedPHeader = pad(indexCachedPercentSize, "%")
 
 	let cacheReport = getCacheReportObj(dbName);
+	let totalDBCollSize = cacheReport.total_db_collection_size;
+	let totalDBIdxSize = cacheReport.total_db_index_size;
 	let totalCacheUsed = cacheReport.total_cache_used;
 	let totalCacheConfig = cacheReport.total_cache_configured;
 	let totalCacheUsedDB = 0;
+	let totalDBCollCacheUsed = 0;
+	let totalDBIdxCacheUsed = 0;
 	if(printSummary) {
 		print();
 		print(`\tThis MongoDB process uses ${cachedPercentString(totalCacheConfig, totalCacheUsed)}% of total cache configured of ${humanReadableNumber(totalCacheConfig)}`);
@@ -221,7 +241,10 @@ function dbCacheReport(dbName, printSummary = true) {
 	}
 	// get cache report
 	cached_db = db.getSiblingDB(dbName);
-	print(`DB name:\t${cached_db._name}`)
+	print(`${pad(15, 'DB name', false)}: ${pad(20, cached_db._name)}`)
+	print(`${pad(15, 'Collection Size', false)}: ${pad(20, humanReadableNumber(totalDBCollSize))}`)
+	print(`${pad(15, 'Index Size', false)}: ${pad(20, humanReadableNumber(totalDBIdxSize))}`)
+
 	print();
 	print(`${collNameHeader} ${collCachedHeader} ${collCachedPHeader} ${indexNameHeader} ${indexCachedHeader} ${indexCachedPHeader} `);
 
@@ -239,7 +262,9 @@ function dbCacheReport(dbName, printSummary = true) {
 					+ pad(indexCachedPercentSize, cachedPercentString(totalCacheUsed, indexCached[i].index_cached_bytes))
 				);
 				totalCacheUsedDB += coll.collection_cached_bytes;
+				totalDBCollCacheUsed += coll.collection_cached_bytes;
 				totalCacheUsedDB += indexCached[i].index_cached_bytes;
+				totalDBIdxCacheUsed += indexCached[i].index_cached_bytes;
 			}
 			else {
 				print(pad(collNameSize, ' -') + ' '
@@ -250,12 +275,35 @@ function dbCacheReport(dbName, printSummary = true) {
 					+ pad(indexCachedPercentSize, cachedPercentString(totalCacheUsed, indexCached[i].index_cached_bytes))
 				);
 				totalCacheUsedDB += indexCached[i].index_cached_bytes;
+				totalDBIdxCacheUsed += indexCached[i].index_cached_bytes;
 			}
 		}
 	}
+	// print totals
+	if(totalCacheUsedDB > 0) {
+		print('-'.repeat(collNameSize + collCachedSize + collCachedPercentSize +
+			indexNameSize + indexCachedSize + indexCachedPercentSize + 5)); // 5 spaces between
+		print(pad(collNameSize, ' ') + ' '
+			+ pad(collCachedSize, humanReadableNumber(totalDBCollCacheUsed)) + ' '
+			+ pad(collCachedPercentSize, ' ') + ' '
+			+ pad(indexNameSize, ' ') + ' '
+			+ pad(indexCachedSize, humanReadableNumber(totalDBIdxCacheUsed)) + ' '
+			+ pad(indexCachedPercentSize, ' ')
+		);
+	}
+
 	print();
-	print(`\t"${dbName}" uses ${cachedPercentString(totalCacheUsed, totalCacheUsedDB)}% of total cache used of ${humanReadableNumber(totalCacheUsed)}`);
-	print(`\t"${dbName}" uses ${cachedPercentString(totalCacheConfig, totalCacheUsedDB)}% of total cache configured of ${humanReadableNumber(totalCacheConfig)}`);
+	print(`\t"${dbName}" database collections:`);
+	print(`\t* ${cachedPercentString(totalDBCollSize, totalDBCollCacheUsed)}% of the collections are in the cache, consuming`);
+	print(`\t* ${humanReadableNumber(totalDBCollCacheUsed).replace('  ', ' ')} or ${cachedPercentString(totalCacheUsed, totalDBCollCacheUsed)}% of total cache used of ${humanReadableNumber(totalCacheUsed)} for collections`);
+	print();
+	print(`\t"${dbName}" database indexes:`);
+	print(`\t* ${cachedPercentString(totalDBIdxSize, totalDBIdxCacheUsed)}% of the indexes are in the cache, consuming`);
+	print(`\t* ${humanReadableNumber(totalDBIdxCacheUsed).replace('  ', ' ')} or ${cachedPercentString(totalCacheUsed, totalDBIdxCacheUsed)}% of total cache used of ${humanReadableNumber(totalCacheUsed)} for indexes`);
+	print();
+	print(`\tOverall,"${dbName}" is consuming:`);
+	print(`\t* ${cachedPercentString(totalCacheConfig, totalCacheUsedDB)}% of total cache configured of ${humanReadableNumber(totalCacheConfig)}`);
+
 }
 
 
@@ -278,7 +326,7 @@ function cacheReport(scope="current") {
 			db.adminCommand('listDatabases').databases.forEach(function(d) {
 				if(! adminDBs.includes(d.name)){
 					dbCacheReport(d.name, firstTime);
-					print("**********");
+					print("*".repeat(60));
 					firstTime = false;
 				}
 			})
@@ -306,6 +354,9 @@ function writeCacheReport(dbase) {
 	print("Sending cache report for:");
 	let ctn = true;
 	let readingId = new ObjectId();
+	// create index on readings
+	dbase[cacheDB].createIndex({cache_reading_id: 1});
+	// send write cache reports
 	db.adminCommand('listDatabases').databases.forEach(function(d) {
 		if(! adminDBs.includes(d.name) && ctn){
 			print(`\t${d.name} database`);
