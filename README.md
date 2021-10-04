@@ -2,21 +2,36 @@
 ## Introduction
 An exploration of how to view the MongoDB cache contents and act on what you see
 
-The 'cache' being referred to here is not the query plan cache, but, instead the RAM set aside by the WiredTiger storage engine to cache documents and indexes for faster access. In short, despite the improvements in storage speed over time, RAM is faster than storage.  
+The 'cache' being referred to here is not the query plan cache, but, instead the RAM set aside by the WiredTiger storage 
+engine to cache documents and indexes for faster access. In short, despite the improvements in storage speed over time, 
+RAM is faster than storage.  
 
-The [FAQ MongoDB Diagnostics](https://docs.mongodb.com/manual/faq/diagnostics/) goes into some depth about what the cache is, how to view it, and its function to handle the [working set](https://en.wikipedia.org/wiki/Working_set).  Certainly, MongoDB users ought to be cognizant of how work the DBMS is doing to read data blocks into and evict out of the cache.
+The [FAQ MongoDB Diagnostics](https://docs.mongodb.com/manual/faq/diagnostics/) goes into some depth about what the 
+cache is, how to view it, and its function to handle the [working set](https://en.wikipedia.org/wiki/Working_set).  
+Certainly, MongoDB users ought to be cognizant of how work the DBMS is doing to read data blocks into and evict out of 
+the cache.
 
-If a block MongoDB needs is not in RAM (a cache fault), it has to read it from storage. The more your DBMS is doing that, the slower the overall system performance. This situation is also described as having a working set that is larger than real RAM (as opposed to virtual RAM). As the FAQ states, this is not necessarily something to be concerned about. 
+If a block MongoDB needs is not in RAM (a cache fault), it has to read it from storage. The more your DBMS is doing that, 
+the slower the overall system performance. This situation is also described as having a working set that is larger than 
+real RAM (as opposed to virtual RAM). As the FAQ states, this is not necessarily something to be concerned about. 
 
-However, it is not clear what to do if you find that your system is overly busy in its cache management. One set of mitigations includes ensuring that queries use indexes and the information model is designed optimally. But, it is still possible, even with optimized queries (and other DB ops), that your system is performing slower than expectations because it's overly busy managing its cache.
+However, it is not clear what to do if you find that your system is overly busy in its cache management. 
+One set of mitigations includes ensuring that queries use indexes and the information model is designed optimally. 
+But, it is still possible, even with optimized queries (and other DB ops), that your system is performing slower 
+than expectations because it's overly busy managing its cache.
 
-What steps would need to be taken to determine what databases, collections, and indexes are being swapped in and out of cache the most often? Knowing this would help to direct your efforts to the parts of your information system that need the most attention. It may not be obvious which queries are slow because of cache faults. The performance of even the most optimal queries/DB ops can be affected by the other, most costly operations.
+What steps would need to be taken to determine what databases, collections, and indexes are being swapped in and out 
+of cache the most often? Knowing this would help to direct your efforts to the parts of your information system 
+that need the most attention. It may not be obvious which queries are slow because of cache faults. The performance 
+of even the most optimal queries/DB ops can be affected by the other, most costly operations.
 
 The work in this repo seeks to explain methods and techniques for using cache metrics to solve performance problems.
 ## Usage
-The initial iteration of the cache wrangler consists of a [cache_report.js](src/mongo_shell/cache_report.js) script designed to be run from the Mongo shell.
+The initial iteration of the cache wrangler consists of a [cache_report.js](src/mongo_shell/cache_report.js) script 
+designed to be run from the Mongo shell.
 
-To run the cache report, simply connect to the cluster of interest and load the script. By default, the script will report on the current database in use. 
+To run the cache report, simply connect to the cluster of interest and load the script. By default, the script will 
+report on the current database in use. 
 
 ```zsh
 Atlas atlas-138n6w-shard-0 [primary] sample_training> load('cache_report.js')
@@ -123,20 +138,28 @@ The indexes consume about another `4,069 b` or less than `0.01%` of the availabl
 One can compare the total collections and indexes for the database to see how much of the collections and indexes are cached.   
 
 You'll also find the total cache consumed by all databases in the cluster at the top of the report. 
-In the report above, the cluster is consuming `10.24%` of the `1,024 mb` of configured cache.
+In the report above, the cluster is consuming `10.24%` of the `1,024 mb` of configured cache. 
+It is possible that the cache used by a collection can be larger than the dataSize of the collection. 
+The additional cache capacity is used for internal indexes for each block when that the blocks are read into the cache.
 
 **A Note About Configured Cache**
 
-It is generally recommended you stick with the cache configuration defaults as there's a delicate balancing act in play between the operating system cache and the MongoDB WiredTiger cache. To learn more see [WiredTiger and Memory Use](https://docs.mongodb.com/manual/core/wiredtiger/#memory-use}). For Atlas, the configution can not be changed. See [Atlas Memory](https://docs.atlas.mongodb.com/sizing-tier-selection/#memory) for details.
+It is generally recommended you stick with the cache configuration defaults as there's a delicate balancing act in play 
+between the operating system cache and the MongoDB WiredTiger cache. 
+To learn more see [WiredTiger and Memory Use](https://docs.mongodb.com/manual/core/wiredtiger/#memory-use}). 
+For Atlas, the configuration can not be changed. 
+See [Atlas Memory](https://docs.atlas.mongodb.com/sizing-tier-selection/#memory) for details.
 
 ---
 ## Persisting the Results
-Additionally, the report can persist its findings back to MongoDB. To persist back to the source cluster, set a variable to a database in which you'd like to persist the results. For example:
+Additionally, the report can persist its findings back to MongoDB. To persist back to the source cluster, 
+set a variable to a database in which you'd like to persist the results. For example:
 
 ```
 let cacheDB = db.getSiblingDB("dba")
 ```
-If you don't want to contaminate your source cluster with the results data, set the variable to a database in anothter cluster. For example:
+If you don't want to contaminate your source cluster with the cache report data, set the variable to a database in another cluster. 
+For example:
 
 ```
 let cacheDB = connect("mongodb+srv://*****:*****@cachehistory.mnp7x.mongodb.net/dba)
@@ -146,7 +169,8 @@ Once the `cacheDB` variable is set, pass it as a parameter to the writeCacheRepo
 ```zsh
 writeCacheReport(cacheDB)
 ```
-The `writeCacheReport()` function writes to a `cache_report_history` collection in the set cache datbase. A document is created for each database in the cluster, with the following structure:
+The `writeCacheReport()` function writes to a `cache_report_history` collection in the set cache datbase. A document is 
+created for each database in the cluster, with the following structure:
 ```js
 db.cache_usage_history.findOne()
 {
@@ -192,8 +216,9 @@ db.cache_usage_history.findOne()
 ### Reporting on the persisted results
 We can use the persisted cache report to summarize the cache usage.
 
-Using the database where the "cache_usage_history" documents are written, the [report_top_five_cache_usages.js](src/mongo_shell/report_top_five_cache_usages.js)
-script reports on the top five most cached collections.
+Using the database where the "cache_usage_history" documents are written, 
+the [report_top_five_cache_usages.js](src/mongo_shell/report_top_five_cache_usages.js) script reports on the top five 
+most cached collections.
 
 ```zsh
 Top Five Cache Usages
