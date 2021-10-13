@@ -98,6 +98,10 @@ function getCollCached(dbRef, collName) {
 			return 0;
 		}
 		else {
+			if("MongoServerError" === e.name) {
+				// handle "MongoServerError: Namespace samples.companyCEOs is a view, not a collection"
+				return 0;
+			}
 			throw e;
 		}
 	}
@@ -177,30 +181,48 @@ function getCacheReportObj(dbName) {
 		let cacheCollection = new Object();
 		cacheCollection.collection_name = x.cn;
 		// append collection data size and index size
-		let collStats = cached_db[x.cn].stats();
-		cacheCollection.collection_size = collStats.size;
-		cacheCollection.total_index_size = collStats.totalIndexSize;
-		// append the collection cache fields
-		cacheCollection.collection_cached_bytes = x.cached;
-		cacheCollection.indexes = [];
+		try {
+			// the db.collection.stats() call can throw exception if this is a view
+			let collStats = cached_db[x.cn].stats();
 
-		totalCacheDB += x.cached;
+			cacheCollection.collection_size = collStats.size;
+			cacheCollection.total_index_size = collStats.totalIndexSize;
+			// append the collection cache fields
+			cacheCollection.collection_cached_bytes = x.cached;
+			cacheCollection.indexes = [];
 
-		let indexCached = getIndexCachedArray(cached_db, x.cn);
-		// append the index cache elements
-		for(let i = 0; i < indexCached.length; i++)	{
+			totalCacheDB += x.cached;
 
-			cacheCollection.indexes.push(
-				{
-					"index_name": indexCached[i].idxName,
-					"index_cached_bytes": indexCached[i].cachedBytes
-				}
-			)
-			totalCacheDB += indexCached[i].cachedBytes;
+			let indexCached = getIndexCachedArray(cached_db, x.cn);
+			// append the index cache elements
+			for(let i = 0; i < indexCached.length; i++)	{
+
+				cacheCollection.indexes.push(
+					{
+						"index_name": indexCached[i].idxName,
+						"index_cached_bytes": indexCached[i].cachedBytes
+					}
+				)
+				totalCacheDB += indexCached[i].cachedBytes;
+			}
+			cacheCollection.total_collection_cache_usage = totalCacheDB
+			cacheCollection.collection_cache_usage_percent = totalCacheDB / totalCacheUsed * 100
+			cacheReport.collections.push(cacheCollection);
 		}
-		cacheCollection.total_collection_cache_usage = totalCacheDB
-		cacheCollection.collection_cache_usage_percent = totalCacheDB / totalCacheUsed * 100
-		cacheReport.collections.push(cacheCollection);
+		catch (e) {
+			if("MongoServerError" === e.name) {
+				// handle "MongoServerError: Namespace samples.companyCEOs is a view, not a collection"
+				continue;
+			}
+			else if(e instanceof TypeError) {
+				// handle "TypeError: Cannot read property 'stats' of undefined"
+				// this is a special type of collection,like one used to store dependent encryption keys
+				continue;
+			}
+			else {
+				throw e;
+			}
+		}
 	}
 
 	return cacheReport;
