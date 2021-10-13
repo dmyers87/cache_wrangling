@@ -234,3 +234,19 @@ date: Thu Sep 30 2021 11:38:12 GMT-0500 (CDT)
 This report lists the collections with the top cache usages, with cache size used, the percent of the available
 cache used, and the max possible cache used if all the collections documents and indexes where cached. 
 Note that it is possible that the cached used by the collection may be larger than total size of the documents and indexes.
+
+## Reporting on the hottest collections
+This repo also contains a report whose logic is borrowed from other open source projects, like Compass. 
+It reports on the collections that are the being read or written; see [report_hottest_collections.js](./src/mongo_shell/report_hottest_collections.js).
+```shell
+$ load('report_hottest_collections.js'); printTHottestCollReport()
+run 'printHottestCollReport()` passing minutes to run
+
+Watching for hot collections for 1 minutes: ...........
+date:		Wed Oct 13 2021 16:43:03 GMT-0500 (Central Daylight Time)
+
+COLL NAME                  LOAD %    READS %   WRITES % 
+csTest.testingC3             0.07      42.46      57.54 
+csTest.testingC4             0.07      35.58      64.42 
+local.oplog.rs               0.07     100.00       0.00 
+```
