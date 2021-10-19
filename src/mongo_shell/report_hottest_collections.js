@@ -73,7 +73,7 @@ function printTHottestCollReport(minutesToWatch=1, waitSecsBetweenTopFetch = 5) 
     // print header
     print();
     print(`date:\t\t${dt}`);
-    let collNameSize = 20;
+    let collNameSize = 40;
     let collNameHeader = pad(collNameSize, "COLL NAME", padLeft=false)
     let loadPercentSize = 12;
     let loadPercentHeader = pad(loadPercentSize, "LOAD %")
