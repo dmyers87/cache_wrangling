@@ -317,11 +317,11 @@ function cacheReport(scope="current") {
  * All cache readings produced by this method have the same cache_reading_id
  */
 function writeCacheReport(dbase) {
-	let adminDBs = ['admin','config','local'];
-	let cacheDB = 'cache_usage_history';
+	const adminDBs = ['admin','config','local'];
+	const cacheDB = 'cache_usage_history';
 	print("Sending cache report for:");
 	let ctn = true;
-	let readingId = new ObjectId();
+	const readingId = new ObjectId();
 	// create index on readings
 	dbase[cacheDB].createIndex({cache_reading_id: 1});
 	// send write cache reports
