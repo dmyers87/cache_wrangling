@@ -239,7 +239,7 @@ Note that it is possible that the cached used by the collection may be larger th
 This repo also contains a report whose logic is borrowed from other open source projects, like Compass. 
 It reports on the collections that are the being read or written; see [report_hottest_collections.js](./src/mongo_shell/report_hottest_collections.js).
 ```shell
-$ load('report_hottest_collections.js'); printTHottestCollReport()
+$ load('report_hottest_collections.js'); printHottestCollReport()
 run 'printHottestCollReport()` passing minutes to run
 
 Watching for hot collections for 1 minutes: ...........
