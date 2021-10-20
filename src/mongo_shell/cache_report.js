@@ -11,41 +11,7 @@
 //  index data is somewhat compressed in the cache (using index prefix compression)
 //  collection data is NOT compressed in the cache
 
-/**
- * Right pad the provided string with the specified character
- * @param width
- * @param string
- * @param padLeft,
- * 		true add spaces on the left, or
- * 		false add space on the right
- * @return {*}
- */
-function pad(width, string, padLeft=true) {
-	// assert(typeof width === "number", 'width arg must be number');
-	// assert(typeof string === "string", 'string arg must be string');
-	let padded = "";
-	if(width >= string.length) {
-		if(padLeft) {
-			padded = string.padStart(width);
-		}
-		else {
-			padded = string.padEnd(width);
-		}
-	}
-	else {
-		padded = string.substring(0, width - 3) + '...';
-	}
-	return padded;
-}
-
-/**
- * @param n number to format
- * @return formatted string
- */
-function niceNum(n) {
-	// assert(typeof n === "number", 'n arg must be number');
-	return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-}
+load('utils.js');
 
 /**
  * @param dbRef database object
@@ -105,26 +71,6 @@ function getCollCached(dbRef, collName) {
 			throw e;
 		}
 	}
-}
-
-/**
- * @param num number that is to be made 'human readable' and formatted
- * @return returns a formatted string
- */
-function humanReadableNumber(num) {
-	let aMB = Math.pow(1024, 2);
-	let aGB = Math.pow(1024, 3);
-	let rtnNum = "0";
-	if(num > aGB) {
-		rtnNum = niceNum(parseFloat((num/aGB).toFixed(2))) + " gb";
-	}
-	else if(num > aMB) {
-		rtnNum = niceNum(parseFloat((num/aMB).toFixed(2))) + " mb";
-	}
-	else {
-		rtnNum = niceNum(num) + "  b";
-	}
-	return rtnNum;
 }
 
 /**
@@ -236,13 +182,13 @@ function getCacheReportObj(dbName) {
  */
 function dbCacheReport(dbName, printSummary = true) {
 	let collNameSize = 20;
-	let collNameHeader = pad(collNameSize, "COLL NAME")
+	let collNameHeader = pad(collNameSize, "COLL NAME", padLeft=false)
 	let collCachedSize = 12;
 	let collCachedHeader = pad(collCachedSize, "CACHED")
 	let collCachedPercentSize = 6;
 	let collCachedPHeader = pad(collCachedPercentSize, "%")
 	let indexNameSize = 20
-	let indexNameHeader = pad(indexNameSize, "INDEX NAME")
+	let indexNameHeader = pad(indexNameSize, "INDEX NAME", padLeft=false)
 	let indexCachedSize = 12;
 	let indexCachedHeader = pad(indexCachedSize, "CACHED")
 	let indexCachedPercentSize = 6;
@@ -276,10 +222,10 @@ function dbCacheReport(dbName, printSummary = true) {
 		let indexIdxLen = indexCached.length;
 		for(let i = 0; i < indexIdxLen; i++)	{
 			if(i === 0) {
-				print(pad(collNameSize, coll.collection_name) + ' '
+				print(pad(collNameSize, coll.collection_name, padLeft=false) + ' '
 					+ pad(collCachedSize, humanReadableNumber(coll.collection_cached_bytes)) + ' '
 					+ pad(collCachedPercentSize, cachedPercentString(totalCacheUsed, coll.collection_cached_bytes)) + ' '
-					+ pad(indexNameSize, indexCached[i].index_name) + ' '
+					+ pad(indexNameSize, indexCached[i].index_name, padLeft=false) + ' '
 					+ pad(indexCachedSize, humanReadableNumber(indexCached[i].index_cached_bytes)) + ' '
 					+ pad(indexCachedPercentSize, cachedPercentString(totalCacheUsed, indexCached[i].index_cached_bytes))
 				);
@@ -292,7 +238,7 @@ function dbCacheReport(dbName, printSummary = true) {
 				print(pad(collNameSize, ' -') + ' '
 					+ pad(collCachedSize, ' ') + ' '
 					+ pad(collCachedPercentSize, ' ') + ' '
-					+ pad(indexNameSize, indexCached[i].index_name) + ' '
+					+ pad(indexNameSize, indexCached[i].index_name, padLeft=false) + ' '
 					+ pad(indexCachedSize, humanReadableNumber(indexCached[i].index_cached_bytes)) + ' '
 					+ pad(indexCachedPercentSize, cachedPercentString(totalCacheUsed, indexCached[i].index_cached_bytes))
 				);
@@ -371,11 +317,11 @@ function cacheReport(scope="current") {
  * All cache readings produced by this method have the same cache_reading_id
  */
 function writeCacheReport(dbase) {
-	let adminDBs = ['admin','config','local'];
-	let cacheDB = 'cache_usage_history';
+	const adminDBs = ['admin','config','local'];
+	const cacheDB = 'cache_usage_history';
 	print("Sending cache report for:");
 	let ctn = true;
-	let readingId = new ObjectId();
+	const readingId = new ObjectId();
 	// create index on readings
 	dbase[cacheDB].createIndex({cache_reading_id: 1});
 	// send write cache reports
@@ -412,4 +358,6 @@ print("\t\t// Setup a connection URI to the destination of cache reports, includ
 print("\t\tlet cacheDB = connect(<connection URI>)");
 print("\t\t// cache documents to be written to 'cache_usage_history' collection")
 print("\t\t'writeCacheReport(cacheDB)' passing a Mongo connection")
+print();
+
 

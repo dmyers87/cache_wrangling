@@ -1,7 +1,7 @@
 // Steve Hand 2021-SEP-30
 // List the top five cache usages
 
-load("cache_report.js")
+load("utils.js")
 var cacheColl = "cache_usage_history";
 
 // get last reading
@@ -17,9 +17,9 @@ else{
 
 if(foundReading) {
     let dbNameSize = 20;
-    let dbNameHeader = pad(dbNameSize, "DB NAME")
+    let dbNameHeader = pad(dbNameSize, "DB NAME", padLeft=false)
     let collNameSize = 20;
-    let collNameHeader = pad(collNameSize, "COLL NAME")
+    let collNameHeader = pad(collNameSize, "COLL NAME", padLeft=false)
     let collCachedSize = 12;
     let collCachedHeader = pad(collCachedSize, "CACHED")
     let collCachedPercentSize = 6;
@@ -70,8 +70,8 @@ if(foundReading) {
         }
     ]).forEach(
         function (d) {
-            print(pad(dbNameSize, d.database) + ' '
-                + pad(collNameSize, d.collection_name) + ' '
+            print(pad(dbNameSize, d.database, padLeft=false) + ' '
+                + pad(collNameSize, d.collection_name, padLeft=false) + ' '
                 + pad(collCachedSize, humanReadableNumber(d.total_collection_cache_usage)) + ' '
                 + pad(collCachedPercentSize, d.total_collection_cache_usage_percent.toFixed(2).toString()) + ' '
                 + pad(dbIfCachedSize, humanReadableNumber(d.total_db_size_if_cached)));
