@@ -124,18 +124,18 @@ function getCacheReportObj(dbName) {
 	let totalCacheDB = 0;
 	cacheReport.collections = [];
 	for(let x of collCached) {
-		let cacheCollection = new Object();
-		cacheCollection.collection_name = x.cn;
+		let cachedCollections = new Object();
+		cachedCollections.collection_name = x.cn;
 		// append collection data size and index size
 		try {
 			// the db.collection.stats() call can throw exception if this is a view
 			let collStats = cached_db[x.cn].stats();
 
-			cacheCollection.collection_size = collStats.size;
-			cacheCollection.total_index_size = collStats.totalIndexSize;
+			cachedCollections.collection_size = collStats.size;
+			cachedCollections.total_index_size = collStats.totalIndexSize;
 			// append the collection cache fields
-			cacheCollection.collection_cached_bytes = x.cached;
-			cacheCollection.indexes = [];
+			cachedCollections.collection_cached_bytes = x.cached;
+			cachedCollections.indexes = [];
 
 			totalCacheDB += x.cached;
 
@@ -143,7 +143,7 @@ function getCacheReportObj(dbName) {
 			// append the index cache elements
 			for(let i = 0; i < indexCached.length; i++)	{
 
-				cacheCollection.indexes.push(
+				cachedCollections.indexes.push(
 					{
 						"index_name": indexCached[i].idxName,
 						"index_cached_bytes": indexCached[i].cachedBytes
@@ -151,9 +151,9 @@ function getCacheReportObj(dbName) {
 				)
 				totalCacheDB += indexCached[i].cachedBytes;
 			}
-			cacheCollection.total_collection_cache_usage = totalCacheDB
-			cacheCollection.collection_cache_usage_percent = totalCacheDB / totalCacheUsed * 100
-			cacheReport.collections.push(cacheCollection);
+			cachedCollections.total_collection_cache_usage = totalCacheDB
+			cachedCollections.collection_cache_usage_percent = totalCacheDB / totalCacheUsed * 100
+			cacheReport.collections.push(cachedCollections);
 		}
 		catch (e) {
 			if("MongoServerError" === e.name) {
@@ -314,17 +314,17 @@ function cacheReport(scope="current") {
  * Ex:
  *   dba_db = connect("mongodb+srv://<un>>:<pw>@<cluster FQDN>/<target DB>>")
  *   writeCacheReport(dba_db)
- * All cache readings produced by this method have the same cache_reading_id
+ * All cache readings produced by this method have the same hot_collections_reading_id
  */
 function writeCacheReport(dbase) {
 	const adminDBs = ['admin','config','local'];
-	const cacheDB = 'cache_usage_history';
+	const cacheRptColl = 'cache_usage_history';
 	print("Sending cache report for:");
 	let ctn = true;
 	const readingId = new ObjectId();
 	// create index on readings
-	dbase[cacheDB].createIndex({cache_reading_id: 1});
-	// send write cache reports
+	dbase[cacheRptColl].createIndex({cache_reading_id: 1});
+	// write cache reports
 	db.adminCommand('listDatabases').databases.forEach(function(d) {
 		if(! adminDBs.includes(d.name) && ctn){
 			print(`\t${d.name} database`);
@@ -333,11 +333,11 @@ function writeCacheReport(dbase) {
 			// enable grouping cache reports by readingId
 			cr.cache_reading_id = readingId;
 			try {
-				dbase[cacheDB].insertOne(cr);
+				dbase[cacheRptColl].insertOne(cr);
 			}
 			catch(e) {
 				if(e instanceof TypeError) {
-					print('verify that the argument is a database object');
+					print('verify that the "dbname" argument is a database object');
 					ctn = false;
 				}
 				else {

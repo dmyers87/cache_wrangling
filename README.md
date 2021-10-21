@@ -169,7 +169,7 @@ Once the `cacheDB` variable is set, pass it as a parameter to the writeCacheRepo
 ```zsh
 writeCacheReport(cacheDB)
 ```
-The `writeCacheReport()` function writes to a `cache_report_history` collection in the set cache datbase. A document is 
+The `writeCacheReport()` function writes to a `cache_report_history` collection in the target database. A document is 
 created for each database in the cluster, with the following structure:
 ```js
 db.cache_usage_history.findOne()
@@ -212,7 +212,10 @@ db.cache_usage_history.findOne()
   ],
   cache_reading_id: ObjectId("61547829bc6d903af09a0c4e") }
 }
-  ```
+```
+Each execution of the method assigns a "cache_reading_id" id. So all cache reports by database share this id.
+This is can be used to report on all cache reports written at that time. 
+
 ### Reporting on the persisted results
 We can use the persisted cache report to summarize the cache usage.
 
@@ -250,3 +253,69 @@ csTest.testingC3             0.07      42.46      57.54
 csTest.testingC4             0.07      35.58      64.42 
 local.oplog.rs               0.07     100.00       0.00 
 ```
+
+### Persisting Hottest Collection report
+Like with the cache report, you can write the hottest collection report to a database of your choosing.
+
+```
+let cacheDB = db.getSiblingDB("dba")
+```
+If you don't want to contaminate your source cluster with the cache report data, set the variable to a database in another cluster.
+For example:
+
+```
+let cacheDB = connect("mongodb+srv://*****:*****@cachehistory.mnp7x.mongodb.net/dba)
+```
+
+Once the `cacheDB` variable is set, pass it as a parameter to the writeCacheReport() function:
+```zsh
+writeHottestCollectionsReport(cacheDB)
+```
+You can also pass two additional parameters
+* minutesToWatch, minutes to watch for changes
+* waitSecsBetweenTopFetch, pauses between looking for new collections
+
+The `writeHottestCollectionsReport()` function writes to a `hottest_collection_history` collection in the target database. 
+A document is created for each database in the cluster, with the following structure:
+
+```js
+$ db.hottest_collection_history.find()
+[
+  {
+    _id: ObjectId("6171d0e3f1fb16a2152ef3e2"),
+    systemInfo: {
+      currentTime: ISODate("2021-10-21T20:42:10.379Z"),
+      hostname: 'replicaset-sme-1.dlas1.ulti.io',
+      cpuAddrSize: 64,
+      memSizeMB: 7976,
+      memLimitMB: 7976,
+      numCores: 2,
+      cpuArch: 'x86_64',
+      numaEnabled: false
+    },
+    watchMinutes: 1,
+    hot_collections: [
+      {
+        collectionName: 'local.oplog.rs',
+        loadPercent: '0.08',
+        readLoadPercent: '100.00',
+        writeLoadPercent: '0.00'
+      },
+      {
+        collectionName: 'csTest.testingC3',
+        loadPercent: '0.02',
+        readLoadPercent: '21.02',
+        writeLoadPercent: '78.98'
+      },
+      {
+        collectionName: 'csTest.testingC4',
+        loadPercent: '0.02',
+        readLoadPercent: '21.84',
+        writeLoadPercent: '78.16'
+      }
+    ],
+    hot_collections_reading_id: ObjectId("6171d0a2f1fb16a2152ef3e1")
+  }
+]
+```
+Each execution of the method assigns a "hot_collections_reading_id" id.  

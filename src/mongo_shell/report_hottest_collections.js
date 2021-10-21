@@ -6,14 +6,20 @@
 load('utils.js');
 
 /**
+ * Get the hottest collection report object
  * Watch "top" command results for hot collections
- * @param minutesToWatch
- * @param waitSecsBetweenTopFetch
+ * @param minutesToWatch, minutes to watch for changes
+ * @param waitSecsBetweenTopFetch, pauses between looking for new collections
  * @return {*[]}
  */
-function hotCollections(minutesToWatch=1, waitSecsBetweenTopFetch = 5) {
-    // assert(typeof minutesToWatch === "number", 'minutesToWatch arg must be number');
-    // assert(typeof waitSecsBetweenTopFetch === "number", 'waitSecsBetweenTopFetch arg must be number');
+function getHottestCollectionsObj(minutesToWatch=1, waitSecsBetweenTopFetch = 5) {
+    assert(typeof minutesToWatch === "number", 'minutesToWatch arg must be number');
+    assert(typeof waitSecsBetweenTopFetch === "number", 'waitSecsBetweenTopFetch arg must be number');
+
+    let hottestCollectionReport = new Object();
+    hottestCollectionReport.systemInfo = db.hostInfo().system;
+
+    hottestCollectionReport.watchMinutes = minutesToWatch;
 
     const num_cores = db.hostInfo().system.numCores;
     const cadence = 1000000 * minutesToWatch * 60 // Can safely assume we're polling 1x/sec TODO
@@ -23,8 +29,8 @@ function hotCollections(minutesToWatch=1, waitSecsBetweenTopFetch = 5) {
     const stopDate = new Date(new Date().getTime() + (minutesToWatch * 60 * 1000));
     const topCollsFirst = db.getSiblingDB("admin").runCommand("top").totals;
 
-    let topCollReport = [];
-    let i = 0
+    let hottestCollections = [];
+    let i = 0;
     while(new Date() < stopDate) {
         process.stdout.write(".");
         sleep(waitSecsBetweenTopFetch*1000);
@@ -49,27 +55,39 @@ function hotCollections(minutesToWatch=1, waitSecsBetweenTopFetch = 5) {
             const totalTimeDiff = collTopStatsLast.total.time - collTopStatsFirst.total.time
             const writeLoadPercent = totalTimeDiff === 0 ? 0 : (((collTopStatsLast.writeLock.time - collTopStatsFirst.writeLock.time) / totalTimeDiff) * 100).toFixed(2);
             const readLoadPercent = totalTimeDiff === 0 ? 0 : (((collTopStatsLast.readLock.time - collTopStatsFirst.readLock.time) / totalTimeDiff) * 100).toFixed(2);
-            topCollReport.push({
-                'collectionName': collName,
-                'loadPercent': ((totalTimeDiff * 100) / (cadence * num_cores)).toFixed(2), // System load.
-                'readLoadPercent': readLoadPercent,
-                'writeLoadPercent': writeLoadPercent
-                }
-            )
+            const loadPercent = ((totalTimeDiff * 100) / (cadence * num_cores)).toFixed(2); // System load.
+            if(loadPercent > 0) {
+                hottestCollections.push({
+                        'collectionName': collName,
+                        'loadPercent': loadPercent,
+                        'readLoadPercent': readLoadPercent,
+                        'writeLoadPercent': writeLoadPercent
+                    }
+                )
+            }
         }
     }
     // Sort
-    topCollReport.sort(function(a, b) {
+    hottestCollections.sort(function(a, b) {
         const f = (b.loadPercent < a.loadPercent) ? -1 : 0;
         return (a.loadPercent < b.loadPercent) ? 1 : f;
     });
-    return topCollReport;
+
+    hottestCollectionReport.hot_collections = hottestCollections;
+
+    return hottestCollectionReport;
 }
 
+/**
+ * Print the hottest collection report
+ * @param minutesToWatch, minutes to watch for changes
+ * @param waitSecsBetweenTopFetch, pauses between looking for new collections
+ */
 function printHottestCollReport(minutesToWatch=1, waitSecsBetweenTopFetch = 5) {
     print();
     const dt = Date();
-    const topCollReport = hotCollections(minutesToWatch, waitSecsBetweenTopFetch);
+    const topCollReport = getHottestCollectionsObj(minutesToWatch, waitSecsBetweenTopFetch);
+    const topColl = topCollReport.hot_collections;
 
     // print header
     print();
@@ -84,14 +102,54 @@ function printHottestCollReport(minutesToWatch=1, waitSecsBetweenTopFetch = 5) {
     const writeLoadPercentHeader = pad(writeLoadPercentSize, "WRITES %")
     print();
     print(`${collNameHeader} ${loadPercentHeader} ${readLoadPercentHeader} ${writeLoadPercentHeader} `);
-    for(rpt of topCollReport) {
-        if(rpt.loadPercent > 0) {
-            print(pad(collNameSize, rpt.collectionName, padLeft=false) + ' '
-                + pad(loadPercentSize, rpt.loadPercent) + ' '
-                + pad(readLoadPercentSize, rpt.readLoadPercent) + ' '
-                + pad(writeLoadPercentSize, rpt.writeLoadPercent) + ' ');
+    for(rpt of topColl) {
+        print(pad(collNameSize, rpt.collectionName, padLeft=false) + ' '
+            + pad(loadPercentSize, rpt.loadPercent) + ' '
+            + pad(readLoadPercentSize, rpt.readLoadPercent) + ' '
+            + pad(writeLoadPercentSize, rpt.writeLoadPercent) + ' ');
+    }
+}
+
+/**
+ * Writes hottestCollectionsReport objects to the 'hottest_collection_history' collection in the specified database
+ * @param dbase, a database reference, albeit local or remote
+ * @param minutesToWatch, minutes to watch for changes
+ * @param waitSecsBetweenTopFetch, pauses between looking for new collections
+ * Ex:
+ *   dba_db = connect("mongodb+srv://<un>>:<pw>@<cluster FQDN>/<target DB>>")
+ *   writeHottestCollectionsReport(dba_db)
+ * All hottest collections readings produced by this method have the same hot_collections_reading_id
+ */
+function writeHottestCollectionsReport(dbase, minutesToWatch=1, waitSecsBetweenTopFetch = 5)  {
+    const hotCollRptColl = 'hottest_collection_history';
+    print("Sending cache report for:");
+    const readingId = new ObjectId();
+    // create index on readings
+    dbase[hotCollRptColl].createIndex({hot_collections_reading_id: 1});
+    // write hottest collection reports
+    let hcr = getHottestCollectionsObj(minutesToWatch, waitSecsBetweenTopFetch);
+    // enable grouping cache reports by readingId
+    hcr.hot_collections_reading_id = readingId;
+    try {
+        dbase[hotCollRptColl].insertOne(hcr);
+    }
+    catch(e) {
+        if(e instanceof TypeError) {
+            print('verify that the "dbname" argument is a database object');
+        }
+        else {
+            throw e;
         }
     }
 }
 
+// main
 print("run 'printHottestCollReport()` passing minutes to run");
+print();
+print("To write the hottest collection report to a database:");
+print("\texecute: ");
+print("\t\t// Setup a connection URI to the destination of cache reports, including target database")
+print("\t\tlet cacheDB = connect(<connection URI>)");
+print("\t\t// hottest collections documents to be written to 'hottest_collection_history' collection")
+print("\t\t'writeHottestCollectionsReport(cacheDB, [minutesToWatch], [waitSecsBetweenTopFetch])' passing a Mongo connection")
+print();
